@@ -1,5 +1,6 @@
 package com.Login1.GiaoDienLogin
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -38,15 +40,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import com.Login1.GiaoDienLogin.service.AuthService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @Preview
 @Composable
-fun RegisterScreen ()
-{
-    Box(
-        modifier = Modifier.fillMaxSize()
-    )
-    {
+fun RegisterScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var successMessage by remember { mutableStateOf<String?>(null) }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var rePassword by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.bg2_login),
             contentDescription = "Background",
@@ -55,39 +67,73 @@ fun RegisterScreen ()
         )
     }
 
-    Column (modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp))
-    {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp)
+    ) {
         Spacer(modifier = Modifier.height(150.dp))
-
-        var email by remember { mutableStateOf("") }
-        var password by remember { mutableStateOf("") }
-        var rePassword by remember { mutableStateOf("") }
-        var passwordVisible by remember { mutableStateOf(false) }
 
         Text(
             text = "Đăng ký",
             color = Color.Black,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
+
         Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(value = email, onValueChange = { email = it}, label = { Text("Email", color = Color.Black) }, modifier = Modifier.fillMaxWidth() )
+        // Hiển thị thông báo thành công nếu có
+        successMessage?.let { success ->
+            Text(
+                text = success,
+                color = Color.Green,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        // Hiển thị thông báo lỗi nếu có
+        errorMessage?.let { error ->
+            Text(
+                text = error,
+                color = Color.Red,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { 
+                email = it
+                errorMessage = null
+                successMessage = null
+            },
+            label = { Text("Email", color = Color.Black) },
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = { 
+                password = it
+                errorMessage = null
+                successMessage = null
+            },
             label = { Text("Mật khẩu", color = Color.Black) },
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
-                IconButton(onClick = { passwordVisible = !passwordVisible})
-                {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                         contentDescription = "Toggle password visibility"
@@ -100,13 +146,16 @@ fun RegisterScreen ()
 
         OutlinedTextField(
             value = rePassword,
-            onValueChange = { rePassword = it },
+            onValueChange = { 
+                rePassword = it
+                errorMessage = null
+                successMessage = null
+            },
             label = { Text("Nhập lại mật khẩu", color = Color.Black) },
             modifier = Modifier.fillMaxWidth(),
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
-                IconButton(onClick = { passwordVisible = !passwordVisible})
-                {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                         contentDescription = "Toggle password visibility"
@@ -117,12 +166,17 @@ fun RegisterScreen ()
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row (modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween)
-        {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Text(
                 text = "Đăng nhập",
-                modifier = Modifier.clickable { },
+                modifier = Modifier.clickable {
+                    navController.navigate("login_screen") {
+                        popUpTo("register_screen") { inclusive = true }
+                    }
+                },
                 color = Color.Black,
                 fontSize = 14.sp
             )
@@ -131,7 +185,45 @@ fun RegisterScreen ()
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { /* Handle login */ },
+            onClick = {
+                // Reset messages
+                errorMessage = null
+                successMessage = null
+
+                // Kiểm tra các trường bắt buộc
+                if (email.isBlank() || password.isBlank() || rePassword.isBlank()) {
+                    val missingFields = mutableListOf<String>()
+                    if (email.isBlank()) missingFields.add("Email")
+                    if (password.isBlank()) missingFields.add("Mật khẩu")
+                    if (rePassword.isBlank()) missingFields.add("Xác nhận mật khẩu")
+                    errorMessage = "Vui lòng nhập ${missingFields.joinToString(", ")}"
+                    return@Button
+                }
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    AuthService.register(email, password, rePassword).fold(
+                        onSuccess = { response ->
+                            CoroutineScope(Dispatchers.Main).launch {
+                                if (response.getBoolean("success")) {
+                                    successMessage = "Đăng ký thành công"
+                                    // Đợi 2 giây trước khi chuyển màn hình
+                                    delay(1000)
+                                    navController.navigate("login_screen") {
+                                        popUpTo("register_screen") { inclusive = true }
+                                    }
+                                } else {
+                                    errorMessage = response.getString("message")
+                                }
+                            }
+                        },
+                        onFailure = { exception ->
+                            CoroutineScope(Dispatchers.Main).launch {
+                                errorMessage = exception.message ?: "Lỗi không xác định"
+                            }
+                        }
+                    )
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
