@@ -25,7 +25,7 @@ source venv/bin/activate
 ### 2. Cài đặt các thư viện cần thiết
 
 ```bash
-pip install flask bcrypt python-dotenv
+pip install -r requirements.txt
 ```
 
 ### 3. Cấu trúc thư mục backend
