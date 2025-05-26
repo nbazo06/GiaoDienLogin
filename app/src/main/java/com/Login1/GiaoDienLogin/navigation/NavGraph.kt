@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.Login1.GiaoDienLogin.EmailConfirmation
+import com.Login1.GiaoDienLogin.ForgotPasswordScreen
 import com.Login1.GiaoDienLogin.LoginScreen
 import com.Login1.GiaoDienLogin.RegisterScreen
 
@@ -21,6 +23,12 @@ fun SetupNavGraph(
         }
         composable(route = "login_screen") {
             LoginScreen(navController = navController)
+        }
+        composable(route = "forgot_password_screen") {
+            ForgotPasswordScreen(navController = navController)
+        }
+        composable(route = "email_confirmation") {
+            EmailConfirmation(navController = navController)
         }
     }
 } 

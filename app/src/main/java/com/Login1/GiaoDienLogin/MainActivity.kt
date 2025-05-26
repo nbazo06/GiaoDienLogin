@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
                     SetupNavGraph(navController = navController)
                 }
             }
+            //ForgotPasswordScreen()
         }
     }
 
