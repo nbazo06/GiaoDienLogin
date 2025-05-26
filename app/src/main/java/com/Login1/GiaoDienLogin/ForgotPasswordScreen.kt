@@ -38,11 +38,22 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import com.Login1.GiaoDienLogin.service.AuthService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
 
 @Preview
 @Composable
-fun ForgotPasswordScreen ()
+fun ForgotPasswordScreen(navController: NavHostController? = null)
 {
+    val context = LocalContext.current
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var successMessage by remember { mutableStateOf<String?>(null) }
+
     Box(
         modifier = Modifier.fillMaxSize()
     )
@@ -55,7 +66,9 @@ fun ForgotPasswordScreen ()
         )
     }
 
-    Column (modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp))
+    Column (modifier = Modifier
+        .fillMaxSize()
+        .padding(horizontal = 24.dp))
     {
         Spacer(modifier = Modifier.height(180.dp))
 
@@ -70,6 +83,30 @@ fun ForgotPasswordScreen ()
         )
 
         Spacer(modifier = Modifier.height(15.dp))
+
+        // Hiển thị thông báo thành công nếu có
+        successMessage?.let { success ->
+            Text(
+                text = success,
+                color = Color.Green,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        // Hiển thị thông báo lỗi nếu có
+        errorMessage?.let { error ->
+            Text(
+                text = error,
+                color = Color.Red,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         Text(
             text = "Vui lòng điền tài khoản bạn dùng để đăng nhập",
@@ -90,7 +127,42 @@ fun ForgotPasswordScreen ()
         Spacer(modifier = Modifier.height(12.dp))
 
         Button(
-            onClick = { /* Handle login */ },
+            onClick = {
+                // Reset messages
+                errorMessage = null
+                successMessage = null
+
+                // Kiểm tra trường bắt buộc
+                if (email.isBlank()) {
+                    errorMessage = "Vui lòng điều Email"
+                    return@Button
+                }
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    AuthService.forgotPassword(email).fold(
+                        onSuccess = { response ->
+                            CoroutineScope(Dispatchers.Main).launch {
+                                if (response.getBoolean("success")) {
+                                    successMessage = "Đã gửi OTP"
+                                    // Đợi 2 giây trước khi chuyển màn hình
+                                    delay(2000)
+                                    // Chuyển sang màn hình Email Confirmation
+                                    navController?.navigate("email_confirmation_screen") {
+                                        popUpTo("forgot_password_screen") { inclusive = true }
+                                    }
+                                } else {
+                                    errorMessage = response.getString("message")
+                                }
+                            }
+                        },
+                        onFailure = { exception ->
+                            CoroutineScope(Dispatchers.Main).launch {
+                                errorMessage = exception.message ?: "Lỗi không xác định"
+                            }
+                        }
+                    )
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),

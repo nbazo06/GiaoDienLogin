@@ -1,6 +1,7 @@
 from flask import Flask
 from register import register_bp
 from login import login_bp
+from forgotpassword import forgot_password_bp
 import logging
 from database import init_db, test_connection
 
@@ -15,6 +16,7 @@ app = Flask(__name__)
 # Đăng ký các blueprint
 app.register_blueprint(register_bp)
 app.register_blueprint(login_bp)
+app.register_blueprint(forgot_password_bp)
 
 @app.before_request
 def before_request():
