@@ -19,6 +19,7 @@ def init_db():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        print("Starting database initialization...")
 
         # User table
         cursor.execute('''
@@ -31,6 +32,7 @@ def init_db():
                 Updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        print("User table created or already exists.")
 
         # Account table
         cursor.execute('''
@@ -45,6 +47,7 @@ def init_db():
                 FOREIGN KEY(UserID) REFERENCES User(UserID)
             )
         ''')
+        print("Account table created or already exists.")
 
         # Category table
         cursor.execute('''
@@ -57,6 +60,7 @@ def init_db():
                 FOREIGN KEY(UserID) REFERENCES User(UserID)
             )
         ''')
+        print("Category table created or already exists.")
 
         # Transaction table
         cursor.execute('''
@@ -74,6 +78,7 @@ def init_db():
                 FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID)
             )
         ''')
+        print("Transactions table created or already exists.")
 
         # Budget table
         cursor.execute('''
@@ -93,6 +98,7 @@ def init_db():
                 FOREIGN KEY(AccountID) REFERENCES Account(AccountID)
             )
         ''')
+        print("Budget table created or already exists.")
 
         # Notification table
         cursor.execute('''
@@ -109,6 +115,7 @@ def init_db():
                 FOREIGN KEY(UserID) REFERENCES User(UserID)
             )
         ''')
+        print("Notification table created or already exists.")
 
         conn.commit()
         print("Database initialized successfully")
@@ -119,21 +126,7 @@ def init_db():
         if 'conn' in locals():
             conn.close()
 
-def test_connection():
-    """Kiểm tra kết nối database"""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1")
-        result = cursor.fetchone()
-        return result is not None
-    except Exception as e:
-        logging.error(f"Database connection test failed: {e}")
-        return False
-    finally:
-        if 'conn' in locals():
-            conn.close()
 
-# Khởi tạo database khi import module
-if not os.path.exists(DB_PATH):
-    init_db() 
+# Thay đoạn cuối của database.py thành:
+if __name__ == "__main__":
+    init_db()
