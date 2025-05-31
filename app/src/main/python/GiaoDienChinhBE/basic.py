@@ -1,9 +1,13 @@
 from flask import Flask, jsonify, request
 import sqlite3
 import os
+from account import account_bp
+from category import category_bp
 from report import report_bp
 
 app = Flask(__name__)
+app.register_blueprint(account_bp)
+app.register_blueprint(category_bp)
 app.register_blueprint(report_bp)
 
 # Đường dẫn tới database

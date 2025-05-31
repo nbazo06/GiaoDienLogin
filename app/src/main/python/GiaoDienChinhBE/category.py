@@ -16,12 +16,9 @@ def get_db_connection():
 def create_category():
     data = request.get_json()
     category_name = data.get('category_name')
-    category_type = data.get('category_type')  # 'Income' hoặc 'Expense'
     user_id = data.get('user_id')
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    if category_type not in ('Income', 'Expense'):
-        return jsonify({'success': False, 'message': 'Loại category không hợp lệ'}), 400
     if not all([category_name, user_id]):
         return jsonify({'success': False, 'message': 'Thiếu thông tin bắt buộc'}), 400
 
@@ -29,9 +26,9 @@ def create_category():
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO Category (Category_name, Category_type, UserID, Created_at, Updated_at)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (category_name, category_type, user_id, now, now))
+            INSERT INTO Category (Category_name, UserID, Created_at, Updated_at)
+            VALUES (?, ?, ?, ?)
+        ''', (category_name, user_id, now, now))
         conn.commit()
         category_id = cursor.lastrowid
         conn.close()
@@ -77,13 +74,9 @@ def update_category(category_id):
     data = request.get_json()
     fields = []
     values = []
-    for field in ['category_name', 'category_type']:
-        if field in data:
-            db_field = 'Category_name' if field == 'category_name' else 'Category_type'
-            if field == 'category_type' and data[field] not in ('Income', 'Expense'):
-                return jsonify({'success': False, 'message': 'Loại category không hợp lệ'}), 400
-            fields.append(f"{db_field} = ?")
-            values.append(data[field])
+    if 'category_name' in data:
+        fields.append("Category_name = ?")
+        values.append(data['category_name'])
     if not fields:
         return jsonify({'success': False, 'message': 'Không có trường nào để cập nhật'}), 400
     values.append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
