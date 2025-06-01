@@ -1,7 +1,7 @@
 import requests
 import json
 
-BASE_URL = 'http://127.0.0.1:5050/api/categories'
+BASE_URL = 'http://127.0.0.1:5000/api/categories'  # hoặc /api/accounts, /api/transactions, ...
 USER_ID = 1  # Thay đổi nếu cần
 
 def print_response(r):
