@@ -8,7 +8,7 @@ import datetime
 
 # Đường dẫn tới database
 DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'database')
-DB_PATH = r"C:\Users\ADMIN\StudioProjects\GiaoDienLogin\app\src\main\database\login_database.db"
+DB_PATH = os.path.join(DB_DIR, 'login_database.db')
 
 report_bp = Blueprint('report', __name__)
 
@@ -51,7 +51,19 @@ def report_summary():
         params = [account_id, value]
         filter_clause = f"{date_filters[mode]}"
 
+        # Trước khi truy vấn, kiểm tra account_id tồn tại
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT 1 FROM Account WHERE AccountID = ?', (account_id,))
+        if cursor.fetchone() is None:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Account không tồn tại'}), 400
+
         if category_id:
+            cursor.execute('SELECT 1 FROM Category WHERE CategoryID = ?', (category_id,))
+            if cursor.fetchone() is None:
+                conn.close()
+                return jsonify({'success': False, 'message': 'Category không tồn tại'}), 400
             filter_clause += " AND t.CategoryID = ?"
             params.append(category_id)
 

@@ -1,8 +1,15 @@
 from flask import Blueprint, request, jsonify
 import sqlite3
+import os
 from datetime import datetime
 
-DB_PATH = r"C:\Users\ADMIN\StudioProjects\GiaoDienLogin\app\src\main\database\login_database.db"
+# Sử dụng đường dẫn tương đối để xác định vị trí database
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+DB_PATH = os.path.join(project_root, 'database', 'login_database.db')
+
+# Tạo thư mục database nếu chưa tồn tại
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 category_bp = Blueprint('category', __name__)
 
@@ -25,6 +32,12 @@ def create_category():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        # Kiểm tra trùng tên category cho user này
+        cursor.execute('SELECT 1 FROM Category WHERE Category_name = ? AND UserID = ?', (category_name, user_id))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'message': 'Tên category đã tồn tại'}), 400
+
         cursor.execute('''
             INSERT INTO Category (Category_name, UserID, Created_at, Updated_at)
             VALUES (?, ?, ?, ?)
@@ -75,6 +88,21 @@ def update_category(category_id):
     fields = []
     values = []
     if 'category_name' in data:
+        # Lấy user_id của category này
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT UserID FROM Category WHERE CategoryID = ?', (category_id,))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Category không tồn tại'}), 404
+        user_id = row['UserID']
+        # Kiểm tra trùng tên với các category khác của user này
+        cursor.execute('SELECT 1 FROM Category WHERE Category_name = ? AND UserID = ? AND CategoryID != ?', (data['category_name'], user_id, category_id))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({'success': False, 'message': 'Tên category đã tồn tại'}), 400
+        conn.close()
         fields.append("Category_name = ?")
         values.append(data['category_name'])
     if not fields:
@@ -98,6 +126,12 @@ def delete_category(category_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        # Kiểm tra category có tồn tại không
+        cursor.execute('SELECT 1 FROM Category WHERE CategoryID = ?', (category_id,))
+        if cursor.fetchone() is None:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Category không tồn tại'}), 404
+
         # Kiểm tra xem có transaction nào liên kết không
         cursor.execute('SELECT COUNT(*) FROM Transactions WHERE CategoryID = ?', (category_id,))
         count = cursor.fetchone()[0]

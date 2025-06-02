@@ -1,0 +1,158 @@
+from flask import Blueprint, request, jsonify
+import sqlite3
+from datetime import datetime
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_DIR = os.path.join(BASE_DIR, '..', '..', 'database')
+DB_PATH = os.path.join(DB_DIR, 'login_database.db')
+
+transactions_bp = Blueprint('transactions', __name__)
+
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# Tạo transaction mới
+@transactions_bp.route('/api/transactions', methods=['POST'])
+def create_transaction():
+    data = request.get_json()
+    account_id = data.get('account_id')
+    transaction_type = data.get('transaction_type')  # "Income" hoặc "Expense"
+    amount = data.get('amount')
+    category_id = data.get('category_id')
+    transaction_date = data.get('transaction_date') or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    note = data.get('note', '')
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    if not all([account_id, transaction_type, amount, category_id]):
+        return jsonify({'success': False, 'message': 'Thiếu thông tin bắt buộc'}), 400
+
+    # Kiểm tra amount là số dương
+    try:
+        amount = float(amount)
+        if amount <= 0:
+            return jsonify({'success': False, 'message': 'Số tiền phải lớn hơn 0'}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': 'Số tiền không hợp lệ'}), 400
+
+    # Kiểm tra transaction_type hợp lệ
+    if transaction_type not in ('Income', 'Expense'):
+        return jsonify({'success': False, 'message': 'Loại giao dịch không hợp lệ'}), 400
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO Transactions (AccountID, Transaction_type, Amount, CategoryID, Transaction_date, Created_at, Updated_at, Note)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (account_id, transaction_type, amount, category_id, transaction_date, now, now, note))
+        conn.commit()
+        transaction_id = cursor.lastrowid
+        conn.close()
+        return jsonify({'success': True, 'transaction_id': transaction_id}), 201
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# Lấy tất cả transaction (có thể lọc theo account_id, category_id, type, date)
+@transactions_bp.route('/api/transactions', methods=['GET'])
+def get_transactions():
+    account_id = request.args.get('account_id')
+    category_id = request.args.get('category_id')
+    transaction_type = request.args.get('transaction_type')
+    query = 'SELECT * FROM Transactions WHERE 1=1'
+    params = []
+    if account_id:
+        query += ' AND AccountID = ?'
+        params.append(account_id)
+    if category_id:
+        query += ' AND CategoryID = ?'
+        params.append(category_id)
+    if transaction_type:
+        query += ' AND Transaction_type = ?'
+        params.append(transaction_type)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        transactions = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return jsonify({'success': True, 'transactions': transactions}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# Xem chi tiết transaction
+@transactions_bp.route('/api/transactions/<int:transaction_id>', methods=['GET'])
+def get_transaction_detail(transaction_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM Transactions WHERE TransactionID = ?', (transaction_id,))
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return jsonify({'success': True, 'transaction': dict(row)}), 200
+        else:
+            return jsonify({'success': False, 'message': 'Không tìm thấy transaction'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# Cập nhật transaction
+@transactions_bp.route('/api/transactions/<int:transaction_id>', methods=['PUT'])
+def update_transaction(transaction_id):
+    data = request.get_json()
+    fields = []
+    values = []
+    for field in ['account_id', 'transaction_type', 'amount', 'category_id', 'transaction_date', 'note']:
+        if field in data:
+            db_field = {
+                'account_id': 'AccountID',
+                'transaction_type': 'Transaction_type',
+                'amount': 'Amount',
+                'category_id': 'CategoryID',
+                'transaction_date': 'Transaction_date',
+                'note': 'Note'
+            }[field]
+            fields.append(f"{db_field} = ?")
+            values.append(data[field])
+    if not fields:
+        return jsonify({'success': False, 'message': 'Không có trường nào để cập nhật'}), 400
+    values.append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    values.append(transaction_id)
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # Kiểm tra transaction có tồn tại không
+        cursor.execute('SELECT 1 FROM Transactions WHERE TransactionID = ?', (transaction_id,))
+        if cursor.fetchone() is None:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Transaction không tồn tại'}), 404
+
+        sql = f"UPDATE Transactions SET {', '.join(fields)}, Updated_at = ? WHERE TransactionID = ?"
+        cursor.execute(sql, values)
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# Xóa transaction
+@transactions_bp.route('/api/transactions/<int:transaction_id>', methods=['DELETE'])
+def delete_transaction(transaction_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # Kiểm tra transaction có tồn tại không
+        cursor.execute('SELECT 1 FROM Transactions WHERE TransactionID = ?', (transaction_id,))
+        if cursor.fetchone() is None:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Transaction không tồn tại'}), 404
+
+        cursor.execute('DELETE FROM Transactions WHERE TransactionID = ?', (transaction_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500

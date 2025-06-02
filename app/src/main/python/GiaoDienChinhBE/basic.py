@@ -4,6 +4,7 @@ import os
 from account import account_bp
 from category import category_bp
 from report import report_bp
+from datetime import datetime
 
 app = Flask(__name__)
 app.register_blueprint(account_bp)
@@ -47,9 +48,27 @@ def add_transaction():
         print("[LOG] Missing or invalid fields")
         return jsonify({'success': False, 'message': 'Missing or invalid fields'}), 400
 
+    # Kiểm tra amount là số dương
+    try:
+        amount = float(amount)
+        if amount <= 0:
+            return jsonify({'success': False, 'message': 'Amount must be positive'}), 400
+    except Exception:
+        return jsonify({'success': False, 'message': 'Amount must be a number'}), 400
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        # Kiểm tra account_id tồn tại
+        cursor.execute('SELECT 1 FROM Account WHERE AccountID = ?', (account_id,))
+        if cursor.fetchone() is None:
+            return jsonify({'success': False, 'message': 'Account does not exist'}), 400
+
+        # Kiểm tra category_id tồn tại
+        cursor.execute('SELECT 1 FROM Category WHERE CategoryID = ?', (category_id,))
+        if cursor.fetchone() is None:
+            return jsonify({'success': False, 'message': 'Category does not exist'}), 400
+
         cursor.execute('''
             INSERT INTO Transactions (AccountID, Transaction_type, Amount, CategoryID, Note)
             VALUES (?, ?, ?, ?, ?)
@@ -84,6 +103,30 @@ def update_transaction(transaction_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        # Kiểm tra transaction_id tồn tại
+        cursor.execute('SELECT 1 FROM Transactions WHERE TransactionID = ?', (transaction_id,))
+        if cursor.fetchone() is None:
+            return jsonify({'success': False, 'message': 'Transaction does not exist'}), 404
+
+        # Kiểm tra amount nếu có
+        if 'amount' in data:
+            try:
+                amt = float(data['amount'])
+                if amt <= 0:
+                    return jsonify({'success': False, 'message': 'Amount must be positive'}), 400
+            except Exception:
+                return jsonify({'success': False, 'message': 'Amount must be a number'}), 400
+        # Kiểm tra account_id, category_id nếu có
+        if 'account_id' in data:
+            cursor.execute('SELECT 1 FROM Account WHERE AccountID = ?', (data['account_id'],))
+            if cursor.fetchone() is None:
+                return jsonify({'success': False, 'message': 'Account does not exist'}), 400
+
+        if 'category_id' in data:
+            cursor.execute('SELECT 1 FROM Category WHERE CategoryID = ?', (data['category_id'],))
+            if cursor.fetchone() is None:
+                return jsonify({'success': False, 'message': 'Category does not exist'}), 400
+
         sql = f"UPDATE Transactions SET {', '.join(fields)} WHERE TransactionID = ?"
         values.append(transaction_id)
         cursor.execute(sql, values)
@@ -116,6 +159,12 @@ def summarize_transactions_by_date():
     if not account_id or not date:
         print("[LOG] Missing account_id or date")
         return jsonify({'success': False, 'message': 'Missing account_id or date'}), 400
+
+    # Kiểm tra định dạng ngày tháng
+    try:
+        datetime.strptime(date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'success': False, 'message': 'Ngày giao dịch không hợp lệ, định dạng phải là YYYY-MM-DD'}), 400
 
     try:
         conn = get_db_connection()
