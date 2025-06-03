@@ -61,8 +61,13 @@ def register():
             'INSERT INTO User (Username, Email, Password) VALUES (?, ?, ?)',
             (username, email, hashed_password)
         )
+        user_id = cursor.lastrowid
         conn.commit()
-        return jsonify({'success': True, 'message': 'Đăng ký thành công'}), 201
+        return jsonify({
+            'success': True, 
+            'message': 'Đăng ký thành công',
+            'user_id': user_id
+        }), 201
 
     except Exception as e:
         logging.error(f"Register error: {str(e)}")

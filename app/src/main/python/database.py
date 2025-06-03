@@ -47,14 +47,13 @@ def init_db():
                 FOREIGN KEY(UserID) REFERENCES User(UserID)
             )
         ''')
-        print("Account table created or already exists.")
-
-        # Category table
+        print("Account table created or already exists.")        # Category table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS Category (
                 CategoryID INTEGER PRIMARY KEY AUTOINCREMENT,
                 UserID INTEGER NOT NULL,
                 Category_name TEXT NOT NULL,
+                Category_type TEXT CHECK(Category_type IN ('income', 'expense')) DEFAULT 'expense',
                 Created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 Updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(UserID) REFERENCES User(UserID)

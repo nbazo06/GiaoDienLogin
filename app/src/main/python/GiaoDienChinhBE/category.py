@@ -24,10 +24,14 @@ def create_category():
     data = request.get_json()
     category_name = data.get('category_name')
     user_id = data.get('user_id')
+    category_type = data.get('category_type', 'expense')
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     if not all([category_name, user_id]):
         return jsonify({'success': False, 'message': 'Thiếu thông tin bắt buộc'}), 400
+
+    if category_type not in ['income', 'expense']:
+        return jsonify({'success': False, 'message': 'Category type must be either income or expense'}), 400
 
     try:
         conn = get_db_connection()
@@ -39,9 +43,9 @@ def create_category():
             return jsonify({'success': False, 'message': 'Tên category đã tồn tại'}), 400
 
         cursor.execute('''
-            INSERT INTO Category (Category_name, UserID, Created_at, Updated_at)
-            VALUES (?, ?, ?, ?)
-        ''', (category_name, user_id, now, now))
+            INSERT INTO Category (Category_name, UserID, Category_type, Created_at, Updated_at)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (category_name, user_id, category_type, now, now))
         conn.commit()
         category_id = cursor.lastrowid
         conn.close()
