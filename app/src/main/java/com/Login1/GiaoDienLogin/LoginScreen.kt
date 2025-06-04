@@ -47,7 +47,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
-@Preview
 @Composable
 fun LoginScreen(navController: NavHostController) {
     val context = LocalContext.current
@@ -172,7 +171,11 @@ fun LoginScreen(navController: NavHostController) {
 
             Text(
                 text = "Quên mật khẩu?",
-                modifier = Modifier.clickable { },
+                modifier = Modifier.clickable { 
+                    navController.navigate("forgot_password_screen") {
+                        popUpTo("login_screen") { inclusive = true }
+                    }
+                },
                 color = Color.Black,
                 fontSize = 14.sp
             )
