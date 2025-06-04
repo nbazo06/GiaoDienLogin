@@ -19,7 +19,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            AddTransactionScreen()
+            GiaoDienLoginTheme {
+                val navController = rememberNavController()
+                Scaffold(modifier = Modifier.fillMaxSize()) {
+                    SetupNavGraph(navController = navController)
+                }
+            }
         }
     }
 
