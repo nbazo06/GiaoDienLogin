@@ -206,7 +206,6 @@ fun RegisterScreen(navController: NavHostController) {
                             CoroutineScope(Dispatchers.Main).launch {
                                 if (response.getBoolean("success")) {
                                     successMessage = "Đăng ký thành công"
-                                    // Đợi 2 giây trước khi chuyển màn hình
                                     delay(1000)
                                     navController.navigate("login_screen") {
                                         popUpTo("register_screen") { inclusive = true }

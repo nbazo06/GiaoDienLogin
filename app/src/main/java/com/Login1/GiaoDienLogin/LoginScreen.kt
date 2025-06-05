@@ -204,9 +204,10 @@ fun LoginScreen(navController: NavHostController) {
                             CoroutineScope(Dispatchers.Main).launch {
                                 if (response.getBoolean("success")) {
                                     successMessage = "Đăng nhập thành công"
-                                    // Đợi 2 giây trước khi chuyển màn hình
-                                    delay(2000)
-                                    // TODO: Thêm navigation sau khi đăng nhập thành công
+                                    delay(1000)
+                                    navController.navigate("home_screen") {
+                                        popUpTo("login_screen") { inclusive = true }
+                                    }
                                 } else {
                                     errorMessage = response.getString("message")
                                 }

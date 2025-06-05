@@ -38,11 +38,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import com.Login1.GiaoDienLogin.service.AuthService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Preview
 @Composable
-fun NewPasswordScreen ()
+fun NewPasswordScreen (navController: NavHostController, email: String)
 {
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var successMessage by remember { mutableStateOf<String?>(null) }
     Box(
         modifier = Modifier.fillMaxSize()
     )
@@ -71,14 +79,28 @@ fun NewPasswordScreen ()
 
         Spacer(modifier = Modifier.height(15.dp))
 
-        Text(
-            text = "Mật khẩu của bạn phải dài từ 8 đến 16 ký tự, phải chứa ít nhất 1 kí tự là số",
-            color = Color.Black,
-            fontSize = 12.sp,
-            modifier = Modifier
-                .fillMaxWidth(),
-            textAlign = TextAlign.Start
-        )
+        successMessage?.let { success ->
+            Text(
+                text = success,
+                color = Color.Green,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        // Hiển thị thông báo lỗi nếu có
+        errorMessage?.let { error ->
+            Text(
+                text = error,
+                color = Color.Red,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         var password by remember { mutableStateOf(  "") }
         var repassword by remember { mutableStateOf("") }
@@ -123,7 +145,42 @@ fun NewPasswordScreen ()
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { /* Handle login */ },
+            onClick = {
+                // Reset messages
+                errorMessage = null
+                successMessage = null
+
+                // Kiểm tra trường bắt buộc
+                if (password.isBlank() || repassword.isBlank()) {
+                    val missingFields = mutableListOf<String>()
+                    if (password.isBlank()) missingFields.add("Mật khẩu")
+                    if (repassword.isBlank()) missingFields.add("Xác nhật mật khẩu")
+                    errorMessage = "Vui lòng nhập ${missingFields.joinToString(", ")}"
+                    return@Button
+                }
+                CoroutineScope(Dispatchers.IO).launch {
+                    AuthService.newPassword(email, password, repassword).fold(
+                        onSuccess = { response ->
+                            CoroutineScope(Dispatchers.Main).launch {
+                                if (response.getBoolean("success")) {
+                                    successMessage = "Đổi mật khẩu thành công"
+                                    delay(1000)
+                                    navController.navigate("login_screen") {
+                                        popUpTo("new_password_screen") { inclusive = true }
+                                    }
+                                } else {
+                                    errorMessage = response.getString("message")
+                                }
+                            }
+                        },
+                        onFailure = { exception ->
+                            CoroutineScope(Dispatchers.Main).launch {
+                                errorMessage = exception.message ?: "Lỗi không xác định"
+                            }
+                        }
+                    )
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),

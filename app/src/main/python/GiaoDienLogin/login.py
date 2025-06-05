@@ -1,6 +1,10 @@
 from flask import Blueprint, request, jsonify
 import bcrypt
 import logging
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from database import get_db_connection
 
 login_bp = Blueprint('login', __name__, url_prefix='/api')
@@ -17,7 +21,7 @@ def login():
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM User WHERE Email = ?', (email,))
+        cursor.execute('SELECT * FROM Users WHERE Email = ?', (email,))
         user = cursor.fetchone()
 
         if user is None:

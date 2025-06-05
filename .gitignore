@@ -13,4 +13,5 @@
 .externalNativeBuild
 .cxx
 local.properties
-/app/src/main/python/__pycache__
+**/__pycache__/
+*.pyc

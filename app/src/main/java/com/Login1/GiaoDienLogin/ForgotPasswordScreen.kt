@@ -144,10 +144,9 @@ fun ForgotPasswordScreen(navController: NavHostController? = null)
                             CoroutineScope(Dispatchers.Main).launch {
                                 if (response.getBoolean("success")) {
                                     successMessage = "Đã gửi OTP"
-                                    // Đợi 2 giây trước khi chuyển màn hình
-                                    delay(2000)
+                                    delay(1000)
                                     // Chuyển sang màn hình Email Confirmation
-                                    navController?.navigate("email_confirmation_screen") {
+                                    navController?.navigate("email_confirmation_screen/${email}") {
                                         popUpTo("forgot_password_screen") { inclusive = true }
                                     }
                                 } else {

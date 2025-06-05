@@ -5,16 +5,20 @@ import random
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from database import get_db_connection
 
-forgot_password_bp = Blueprint('forgotPassword', __name__, url_prefix='/api')
+forgot_password_bp = Blueprint('forgot-password', __name__, url_prefix='/api')
 
 def send_otp_email(email, otp):
     """Gửi mã OTP qua email"""
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
-    sender_email = "your-email@gmail.com"  # Thay bằng email của bạn
-    sender_password = "your-app-password"   # Thay bằng mật khẩu ứng dụng
+    sender_email = "vaimuc590@gmail.com"
+    sender_password = "REMOVED"
 
     # Tạo message
     message = MIMEMultipart()
@@ -72,7 +76,7 @@ def forgot_password():
         # Kiểm tra email trong database
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+        cursor.execute('SELECT * FROM Users WHERE email = ?', (email,))
         user = cursor.fetchone()
 
         if user is None:
@@ -84,6 +88,12 @@ def forgot_password():
         # Tạo mã OTP ngẫu nhiên 6 số
         otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
         
+        # Lưu OTP vào database
+        cursor.execute('''
+            INSERT OR REPLACE INTO EmailVerification (Email, OTP)
+            VALUES (?, ?)
+        ''', (email, otp))
+        conn.commit()
 
         # Gửi OTP qua email
         if send_otp_email(email, otp):
