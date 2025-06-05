@@ -39,15 +39,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.Login1.GiaoDienLogin.service.AuthService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Preview
 @Composable
-fun EmailConfirmation (navController: NavHostController? = null)
+
+fun EmailConfirmation(navController: NavHostController, email: String)
 {
-    Box(
-        modifier = Modifier.fillMaxSize()
-    )
-    {
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var successMessage by remember { mutableStateOf<String?>(null) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.bg2_login),
             contentDescription = "Background",
@@ -72,24 +78,41 @@ fun EmailConfirmation (navController: NavHostController? = null)
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        successMessage?.let { success ->
+            Text(
+                text = success,
+                color = Color.Green,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        // Hiển thị thông báo lỗi nếu có
+        errorMessage?.let { error ->
+            Text(
+                text = error,
+                color = Color.Red,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         Text(
-            text = "Vui lòng kiểm tra email của bạn: " +
-                    "xxx@gmail.com" +
-                    "",
-
-// Mấy anh thêm code lấy dữ liệu từ cái biến email trong Forgot để cho vào text trên nha
-
+            text = "Đã gửi mã xác nhận đến Email của bạn:\n$email",  // <-- Hiển thị email tại đây
             color = Color.Black,
             fontSize = 18.sp,
-            modifier = Modifier
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Start
         )
 
         Spacer(modifier = Modifier.height(30.dp))
 
         Text(
-            text = "Vui lòng nhập mã để xác nhận Email của bạn:" +
+            text = "Vui lòng nhập mã xác nhận:" +
                     "",
             color = Color.Black,
             fontSize = 15.sp,
@@ -100,14 +123,47 @@ fun EmailConfirmation (navController: NavHostController? = null)
 
         Spacer(modifier = Modifier.height(5.dp))
 
-        var code by remember { mutableStateOf("") }
+        var otp by remember { mutableStateOf("") }
 
-        OutlinedTextField(value = code, onValueChange = { code = it}, label = { Text("Mã xác nhận", color = Color.Black) }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = otp, onValueChange = { otp = it}, label = { Text("Mã xác nhận", color = Color.Black) }, modifier = Modifier.fillMaxWidth())
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { /* Handle login */ },
+            onClick = {
+                // Reset messages
+                errorMessage = null
+                successMessage = null
+
+                // Kiểm tra trường bắt buộc
+                if (otp.isBlank()) {
+                    errorMessage = "Vui lòng nhập mã OTP"
+                    return@Button
+                }
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    AuthService.emailConfirmation(email, otp).fold(
+                        onSuccess = { response ->
+                            CoroutineScope(Dispatchers.Main).launch {
+                                if (response.getBoolean("success")) {
+                                    successMessage = "Xác nhận OTP"
+                                    delay(1000)
+                                    navController.navigate("new_password_screen/${email}") {
+                                        popUpTo("email_confirmation_screen") { inclusive = true }
+                                    }
+                                } else {
+                                    errorMessage = response.getString("message")
+                                }
+                            }
+                        },
+                        onFailure = { exception ->
+                            CoroutineScope(Dispatchers.Main).launch {
+                                errorMessage = exception.message ?: "Lỗi không xác định"
+                            }
+                        }
+                    )
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),

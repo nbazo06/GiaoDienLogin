@@ -23,7 +23,7 @@ def init_db():
 
         # User table
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS User (
+            CREATE TABLE IF NOT EXISTS Users (
                 UserID INTEGER PRIMARY KEY AUTOINCREMENT,
                 Username TEXT NOT NULL,
                 Email TEXT UNIQUE NOT NULL,
@@ -32,7 +32,7 @@ def init_db():
                 Updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        print("User table created or already exists.")
+        print("Users table created or already exists.")
 
         # Account table
         cursor.execute('''
@@ -47,7 +47,19 @@ def init_db():
                 FOREIGN KEY(UserID) REFERENCES User(UserID)
             )
         ''')
-        print("Account table created or already exists.")        # Category table
+        print("Account table created or already exists.")
+        
+        # EmailVerification table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS EmailVerification (
+                Email TEXT PRIMARY KEY,
+                OTP TEXT NOT NULL,
+                Created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        print("EmailVerification table created or already exists.")
+        
+        # Category table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS Category (
                 CategoryID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -125,7 +137,5 @@ def init_db():
         if 'conn' in locals():
             conn.close()
 
-
-# Thay đoạn cuối của database.py thành:
 if __name__ == "__main__":
     init_db()

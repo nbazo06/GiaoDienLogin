@@ -62,6 +62,7 @@ class AuthService {
             var connection: HttpURLConnection? = null
             return try {
                 val url = URL("$BASE_URL/register")
+                android.util.Log.d("AuthService", "Trying to connect to: $url") // Better Android logging
                 connection = url.openConnection() as HttpURLConnection
                 connection.apply {
                     requestMethod = "POST"
@@ -75,6 +76,44 @@ class AuthService {
                     put("email", email)
                     put("password", password)
                     put("rePassword", rePassword)
+                }.toString()
+                android.util.Log.d("AuthService", "Sending data: $jsonInputString")
+
+                OutputStreamWriter(connection.outputStream).use { it.write(jsonInputString) }
+
+                android.util.Log.d("AuthService", "Response code: ${connection.responseCode}")
+                val response = readResponse(connection)
+                android.util.Log.d("AuthService", "Response: $response")
+
+                if (connection.responseCode in 200..299) {
+                    Result.success(response)
+                } else {
+                    Result.failure(Exception(response.getString("message")))
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("AuthService", "Error: ${e.message}", e)
+                e.printStackTrace()
+                Result.failure(Exception("Không thể kết nối đến server: ${e.message}"))
+            } finally {
+                connection?.disconnect()
+            }
+        }
+
+        suspend fun forgotPassword(email: String): Result<JSONObject> {
+            var connection: HttpURLConnection? = null
+            return try {
+                val url = URL("$BASE_URL/forgot-password")
+                connection = url.openConnection() as HttpURLConnection
+                connection.apply {
+                    requestMethod = "POST"
+                    setRequestProperty("Content-Type", "application/json")
+                    doOutput = true
+                    connectTimeout = 5000
+                    readTimeout = 5000
+                }
+
+                val jsonInputString = JSONObject().apply {
+                    put("email", email)
                 }.toString()
 
                 OutputStreamWriter(connection.outputStream).use { it.write(jsonInputString) }
@@ -91,11 +130,13 @@ class AuthService {
                 connection?.disconnect()
             }
         }
-
-        suspend fun forgotPassword(email: String): Result<JSONObject> {
+        suspend fun emailConfirmation(
+            email: String,
+            otp: String
+        ): Result<JSONObject> {
             var connection: HttpURLConnection? = null
             return try {
-                val url = URL("$BASE_URL/forgotPassword")
+                val url = URL("$BASE_URL/email-confirmation")
                 connection = url.openConnection() as HttpURLConnection
                 connection.apply {
                     requestMethod = "POST"
@@ -107,6 +148,44 @@ class AuthService {
 
                 val jsonInputString = JSONObject().apply {
                     put("email", email)
+                    put("otp", otp)
+                }.toString()
+
+                OutputStreamWriter(connection.outputStream).use { it.write(jsonInputString) }
+
+                val response = readResponse(connection)
+                if (connection.responseCode in 200..299) {
+                    Result.success(response)
+                } else {
+                    Result.failure(Exception(response.getString("message")))
+                }
+            } catch (e: Exception) {
+                Result.failure(Exception("Không thể kết nối đến server"))
+            } finally {
+                connection?.disconnect()
+            }
+        }
+        suspend fun newPassword(
+            email: String,
+            newpassword: String,
+            renewpassword: String
+        ): Result<JSONObject> {
+            var connection: HttpURLConnection? = null
+            return try {
+                val url = URL("$BASE_URL/new-password")
+                connection = url.openConnection() as HttpURLConnection
+                connection.apply {
+                    requestMethod = "POST"
+                    setRequestProperty("Content-Type", "application/json")
+                    doOutput = true
+                    connectTimeout = 5000
+                    readTimeout = 5000
+                }
+
+                val jsonInputString = JSONObject().apply {
+                    put("email", email)
+                    put("newPassword", newpassword)
+                    put("reNewPassword", renewpassword)
                 }.toString()
 
                 OutputStreamWriter(connection.outputStream).use { it.write(jsonInputString) }

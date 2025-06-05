@@ -1,22 +1,32 @@
 from flask import Flask
-from register import register_bp
-from login import login_bp
-from forgotpassword import forgot_password_bp
+from flask_cors import CORS
 import logging
-from database import init_db, get_db_connection
+import sys
 
-# Cấu hình logging
+# Cấu hình logging chi tiết hơn
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG,  # Set to DEBUG for more detailed logs
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    stream=sys.stdout  # Log to stdout for immediate feedback
 )
 
+from GiaoDienLogin.register import register_bp
+from GiaoDienLogin.login import login_bp
+from GiaoDienLogin.forgotpassword import forgot_password_bp
+from GiaoDienLogin.emailconfirmation import email_confirmation_bp
+from GiaoDienLogin.newpassword import new_password_bp
+
+from database import init_db, get_db_connection
+
 app = Flask(__name__)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Đăng ký các blueprint
 app.register_blueprint(register_bp)
 app.register_blueprint(login_bp)
 app.register_blueprint(forgot_password_bp)
+app.register_blueprint(email_confirmation_bp)
+app.register_blueprint(new_password_bp)
 
 @app.before_request
 def before_request():
@@ -28,7 +38,10 @@ def hello():
     return 'Server is running!'
 
 if __name__ == '__main__':
-    # Khởi tạo database khi khởi động server
-    init_db()
-    logging.info("Starting Flask server on http://127.0.0.1:5000")
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    try:
+        init_db()  # Khởi tạo database nếu chưa có
+        logging.info("Starting Flask server on http://0.0.0.0:5000")
+        app.run(host='0.0.0.0', port=5000, debug=True)
+    except Exception as e:
+        logging.error(f"Error starting server: {str(e)}")
+        raise

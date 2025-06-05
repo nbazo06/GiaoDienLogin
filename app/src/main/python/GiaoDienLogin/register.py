@@ -2,6 +2,11 @@ from flask import Blueprint, request, jsonify
 import bcrypt
 import logging
 import re
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from database import get_db_connection
 
 register_bp = Blueprint('register', __name__, url_prefix='/api')
@@ -40,11 +45,11 @@ def register():
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM User WHERE Email = ?', (email,))
+        cursor.execute('SELECT * FROM Users WHERE Email = ?', (email,))
         if cursor.fetchone():
             return jsonify({'success': False, 'message': 'Email đã được sử dụng'}), 400
 
-        cursor.execute('SELECT * FROM User WHERE Username = ?', (username,))
+        cursor.execute('SELECT * FROM Users WHERE Username = ?', (username,))
         if cursor.fetchone():
             return jsonify({'success': False, 'message': 'Tên đăng nhập đã được sử dụng'}), 400
 
@@ -58,7 +63,7 @@ def register():
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
         cursor.execute(
-            'INSERT INTO User (Username, Email, Password) VALUES (?, ?, ?)',
+            'INSERT INTO Users (Username, Email, Password) VALUES (?, ?, ?)',
             (username, email, hashed_password)
         )
         user_id = cursor.lastrowid
