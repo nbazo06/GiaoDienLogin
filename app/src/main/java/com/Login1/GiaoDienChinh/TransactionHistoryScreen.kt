@@ -2,6 +2,7 @@ package com.Login1.GiaoDienChinh
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,156 +28,18 @@ import java.util.*
 
 data class GiaoDich(
     val id: Int,
-    val ngay: String,        // định dạng "dd-MM-yyyy"
-    val loai: String,        // ví dụ: "Giáo dục", "Lương"
-    val soTien: Int,         // đơn vị: đồng
-    val iconResId: Int,      // id của drawable
-    val isThuNhap: Boolean   // true nếu là thu nhập
+    val ngay: String,
+    val tenLoai: String,
+    val soTien: Int,
+    val iconRes: Int,
+    val thuNhap: Boolean
 )
 
-@Composable
-fun NgayGiaoDich(
-    ngay: String,
-    danhSach: List<GiaoDich>
-) {
-    val tongThu = danhSach.filter { it.isThuNhap }.sumOf { it.soTien }
-    val tongChi = danhSach.filter { !it.isThuNhap }.sumOf { it.soTien }
-    val formatTong = tongThu - tongChi
-    val formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
-    val localDate = LocalDate.parse(ngay, formatter)
-    val homNay = LocalDate.now()
-    val homQua = LocalDate.now().minusDays(1)
-
-    val labelNgay = when (localDate) {
-        homNay -> "Hôm nay"
-        homQua -> "Hôm qua"
-        else -> ""
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(15.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row {
-
-                        Text(
-                            text = "%02d".format(localDate.dayOfMonth), // Ngày có 2 chữ số
-                            fontSize = 30.sp,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-
-                        Spacer(Modifier.width(10.dp))
-
-                        Column {
-                        if (labelNgay.isNotEmpty()) {
-                            Text(
-                                text = labelNgay,
-                                fontSize = 14.sp,
-                                color = Color.DarkGray
-                            )
-                        }
-                        Text(
-                            text = localDate.format(
-                                DateTimeFormatter.ofPattern("MMMM yyyy", Locale("vi"))
-                            ),
-                            fontSize = 12.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
-
-                Text(
-                    text = if (formatTong >= 0) "+%,d".format(formatTong) else "-%,d".format(-formatTong),
-                    color = if (formatTong >= 0) Color(0xFF2E7D32) else Color.Red,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            danhSach.forEach { giaoDich ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = painterResource(id = giaoDich.iconResId),
-                            contentDescription = giaoDich.loai,
-                            modifier = Modifier.size(36.dp)
-                        )
-                        Spacer(modifier = Modifier.width(20.dp))
-                        Text(
-                            text = giaoDich.loai,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    Text(
-                        text = "%,d".format(giaoDich.soTien),
-                        fontSize = 18.sp,
-                        color = if (giaoDich.isThuNhap) Color(0xFF0288D1) else Color.Red,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun LichSuGiaoDichScreen(transactionsByDate: Map<String, List<GiaoDich>>) {
-    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-        transactionsByDate.entries.sortedByDescending { it.key }.forEach { (ngay, danhSach) ->
-            NgayGiaoDich(ngay = ngay, danhSach = danhSach)
-        }
-    }
-}
-
-@Composable
-fun BottomIconWithText(iconResId: Int, label: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Image(
-            painter = painterResource(id = iconResId),
-            contentDescription = label,
-            modifier = Modifier.size(35.dp)
-        )
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = Color.Black
-        )
-    }
-}
-
-
 @Preview
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionHistoryScreen() {
-    var expandedNguonTien by remember { mutableStateOf(false) }
     var nguonTien by remember { mutableStateOf("") }
-
-    val nguonTienList = listOf(
-        NguonTienItem(R.drawable.cash, "Tiền mặt"),
-        NguonTienItem(R.drawable.atm, "Ngân hàng")
-    )
+    var selectedFilter by remember { mutableStateOf("Tháng này") } // 👈 Thêm dòng này
 
     val formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
     val homNay = LocalDate.now().format(formatter)
@@ -196,50 +59,7 @@ fun TransactionHistoryScreen() {
     )
 
     Scaffold(
-        bottomBar = {
-            Column {
-                HorizontalDivider(
-                    color = Color.Black,
-                    thickness = 1.dp,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFFE0E0E0))
-                        .padding(vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        BottomIconWithText(R.drawable.home, "Trang chủ")
-                        BottomIconWithText(R.drawable.file, "Lịch sử")
-                    }
-
-                    Box(
-                        modifier = Modifier.weight(0.8f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.add),
-                            contentDescription = "Thêm",
-                            modifier = Modifier.size(65.dp)
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        BottomIconWithText(R.drawable.wallet, "Ngân sách")
-                        BottomIconWithText(R.drawable.user, "Người dùng")
-                    }
-                }
-            }
-        }
+        bottomBar = { BottomNavigationBar() }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -247,133 +67,324 @@ fun TransactionHistoryScreen() {
                 .background(Color(0xFFE0E0E0))
                 .padding(paddingValues)
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 10.dp)
-            ) {
-                ExposedDropdownMenuBox(
-                    expanded = expandedNguonTien,
-                    onExpandedChange = { expandedNguonTien = !expandedNguonTien }
-                ) {
-                    OutlinedTextField(
-                        readOnly = true,
-                        value = nguonTien,
-                        onValueChange = {},
-                        placeholder = { Text("Tổng cộng", fontSize = 20.sp) },
-                        singleLine = true,
-                        modifier = Modifier
-                            .width(170.dp)
-                            .menuAnchor(),
-                        trailingIcon = {
-                            Icon(
-                                painter = painterResource(id = R.drawable.reorder),
-                                contentDescription = "Dropdown Icon",
-                                modifier = Modifier.size(24.dp)
-                            )
-                        },
-                        shape = RoundedCornerShape(15.dp),
-                        textStyle = TextStyle(fontSize = 20.sp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.White,
-                            unfocusedBorderColor = Color.White,
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            disabledContainerColor = Color.White
-                        )
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = expandedNguonTien,
-                        onDismissRequest = { expandedNguonTien = false }
-                    ) {
-                        nguonTienList.forEach { item ->
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Image(
-                                            painter = painterResource(id = item.icon),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(text = item.title)
-                                    }
-                                },
-                                onClick = {
-                                    nguonTien = item.title
-                                    expandedNguonTien = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 12.dp)
-            ) {
-                IconButton(onClick = {}) {
-                    Image(
-                        painter = painterResource(id = R.drawable.search),
-                        contentDescription = "Search",
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
-
-                IconButton(onClick = {}) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ellipsis),
-                        contentDescription = "More",
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 75.dp)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Button(
-                    onClick = { /* Xử lý Tháng x */ },
-                    modifier = Modifier.weight(0.9f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE0E0E0))
-                ) {
-                    Text("THÁNG x", color = Color.Black, fontSize = 12.sp)
-                }
-
-                Button(
-                    onClick = { /* Xử lý Tháng trước */ },
-                    modifier = Modifier.weight(1.2f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE0E0E0))
-                ) {
-                    Text("THÁNG TRƯỚC", color = Color.Black, fontSize = 12.sp)
-                }
-
-                Button(
-                    onClick = { /* Xử lý Tháng này */ },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE0E0E0))
-                ) {
-                    Text("THÁNG NÀY", color = Color.Black, fontSize = 12.sp)
-                }
-            }
-
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 150.dp)
+                    .fillMaxWidth()
+                    .padding(top = 10.dp)
             ) {
-                LichSuGiaoDichScreen(fakeData)
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    NguonTienDropdown(
+                        nguonTien = nguonTien,
+                        onNguonTienChange = { nguonTien = it }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp)) // 👈 Thêm khoảng cách giữa "Tổng cộng" và các tab
+
+                MonthFilterButtons(
+                    selected = selectedFilter,
+                    onSelectedChange = { selectedFilter = it }
+                )
+            }
+
+            TopBarIcons()
+
+            FilterButtonsRow()
+
+            TransactionHistoryContent(fakeData)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NguonTienDropdown(
+    nguonTien: String,
+    onNguonTienChange: (String) -> Unit
+) {
+    var expandedNguonTien by remember { mutableStateOf(false) }
+
+    val nguonTienList = listOf(
+        NguonTienItem(R.drawable.cash, "Tiền mặt"),
+        NguonTienItem(R.drawable.atm, "Ngân hàng")
+    )
+
+    ExposedDropdownMenuBox(
+        expanded = expandedNguonTien,
+        onExpandedChange = { expandedNguonTien = !expandedNguonTien }
+    ) {
+        OutlinedTextField(
+            readOnly = true,
+            value = nguonTien,
+            onValueChange = {},
+            placeholder = { Text("Tổng cộng", fontSize = 20.sp) },
+            singleLine = true,
+            modifier = Modifier
+                .width(170.dp)
+                .menuAnchor(),
+            trailingIcon = {
+                Icon(
+                    painter = painterResource(id = R.drawable.reorder),
+                    contentDescription = "Dropdown Icon",
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            shape = RoundedCornerShape(15.dp),
+            textStyle = TextStyle(fontSize = 20.sp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White,
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                disabledContainerColor = Color.White
+            )
+        )
+
+        ExposedDropdownMenu(
+            expanded = expandedNguonTien,
+            onDismissRequest = { expandedNguonTien = false }
+        ) {
+            nguonTienList.forEach { item ->
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = painterResource(id = item.icon),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = item.title)
+                        }
+                    },
+                    onClick = {
+                        onNguonTienChange(item.title)
+                        expandedNguonTien = false
+                    }
+                )
             }
         }
     }
 }
 
+@Composable
+fun TopBarIcons() {
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopEnd
+    ) {
+        Row(
+            modifier = Modifier.padding(top = 12.dp)
+        ) {
+            IconButton(onClick = { /*TODO*/ }) {
+                Image(
+                    painter = painterResource(id = R.drawable.search),
+                    contentDescription = "Search",
+                    modifier = Modifier.size(30.dp)
+                )
+            }
 
+            IconButton(onClick = { /*TODO*/ }) {
+                Image(
+                    painter = painterResource(id = R.drawable.ellipsis),
+                    contentDescription = "More",
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FilterButtonsRow() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 75.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // các Button như cũ
+        }
+    }
+}
+
+@Composable
+fun BottomIconWithText(iconRes: Int, label: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 8.dp)
+    ) {
+        Image(
+            painter = painterResource(id = iconRes),
+            contentDescription = label,
+            modifier = Modifier.size(30.dp)
+        )
+        Text(text = label, fontSize = 12.sp)
+    }
+}
+
+@Composable
+fun TransactionHistoryContent(transactionsByDate: Map<String, List<GiaoDich>>) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 150.dp)
+    ) {
+        LichSuGiaoDichScreen(transactionsByDate)
+    }
+}
+
+@Composable
+fun LichSuGiaoDichScreen(transactionsByDate: Map<String, List<GiaoDich>>) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        transactionsByDate.forEach { (date, transactions) ->
+            // Tính tổng thu và chi
+            val tongThu = transactions.filter { it.thuNhap }.sumOf { it.soTien }
+            val tongChi = transactions.filter { !it.thuNhap }.sumOf { it.soTien }
+            val soDu = tongThu - tongChi
+
+            // Xử lý ngày tháng để lấy định dạng hiển thị
+            val ngaySo = date.substring(0, 2)
+            val ngayLocalDate = LocalDate.parse(date, DateTimeFormatter.ofPattern("dd-MM-yyyy"))
+            val homNay = LocalDate.now()
+            val homQua = homNay.minusDays(1)
+
+            val label = when (ngayLocalDate) {
+                homNay -> "Hôm nay"
+                homQua -> "Hôm qua"
+                else -> ""
+            }
+            val thangNam = "tháng ${ngayLocalDate.monthValue} ${ngayLocalDate.year}"
+
+            val isPositive = soDu >= 0
+            val soDuText = if (isPositive) "+%,d".format(soDu) else "-%,d".format(kotlin.math.abs(soDu))
+            val soDuColor = if (isPositive) Color(0xFF4CAF50) else Color(0xFFF44336)
+
+            // Container cho từng ngày
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, shape = RoundedCornerShape(15.dp))
+                    .padding(16.dp)
+                    .padding(bottom = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = ngaySo,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                        Column {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.Gray
+                            )
+                            Text(
+                                text = thangNam,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = soDuText,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = soDuColor
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Hiển thị các giao dịch trong ngày
+                transactions.forEach { giaoDich ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = giaoDich.iconRes),
+                            contentDescription = giaoDich.tenLoai,
+                            modifier = Modifier.size(30.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = giaoDich.tenLoai,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            text = "%,d".format(giaoDich.soTien),
+                            color = if (giaoDich.thuNhap) Color(0xFF2196F3) else Color(0xFFF44336),
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+fun MonthFilterButtons(
+    selected: String,
+    onSelectedChange: (String) -> Unit
+) {
+    val options = listOf("Tháng X", "Tháng trước", "Tháng này")
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, start = 16.dp, end = 16.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        options.forEach { label ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .clickable { onSelectedChange(label) }
+                    .padding(vertical = 4.dp)
+            ) {
+                Text(
+                    text = label,
+                    fontSize = 16.sp,
+                    color = Color.Black,
+                    fontWeight = if (label == selected) FontWeight.Bold else FontWeight.Normal
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                if (label == selected) {
+                    Box(
+                        modifier = Modifier
+                            .height(2.dp)
+                            .width(40.dp)
+                            .background(Color.Black, shape = RoundedCornerShape(1.dp))
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+            }
+        }
+    }
+}
