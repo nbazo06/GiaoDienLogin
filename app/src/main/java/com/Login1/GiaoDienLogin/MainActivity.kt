@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.Login1.GiaoDienChinh.AddTransactionScreen
 import com.Login1.navigation.SetupNavGraph
+import com.Login1.GiaoDienChinh.TransactionHistoryScreen
+import com.Login1.GiaoDienLogin.navigation.SetupNavGraph
 import com.Login1.GiaoDienLogin.ui.theme.GiaoDienLoginTheme
 
 class MainActivity : ComponentActivity() {
@@ -25,6 +27,7 @@ class MainActivity : ComponentActivity() {
                     SetupNavGraph(navController = navController)
                 }
             }
+//            TransactionHistoryScreen()
         }
     }
 

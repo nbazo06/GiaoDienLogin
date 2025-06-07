@@ -26,6 +26,30 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Scaffold
 import com.Login1.GiaoDienLogin.R
 import androidx.navigation.NavHostController
+    import androidx.compose.foundation.Image
+    import androidx.compose.foundation.background
+    import androidx.compose.foundation.layout.*
+    import androidx.compose.foundation.shape.RoundedCornerShape
+    import androidx.compose.material.icons.Icons
+    import androidx.compose.material.icons.filled.*
+    import androidx.compose.material3.Button
+    import androidx.compose.material3.ButtonDefaults
+    import androidx.compose.material3.Card
+    import androidx.compose.material3.Icon
+    import androidx.compose.material3.IconButton
+    import androidx.compose.material3.Text
+    import androidx.compose.runtime.*
+    import androidx.compose.ui.Alignment
+    import androidx.compose.ui.Modifier
+    import androidx.compose.ui.graphics.Color
+    import androidx.compose.ui.text.font.FontWeight
+    import androidx.compose.ui.tooling.preview.Preview
+    import androidx.compose.ui.unit.dp
+    import androidx.compose.ui.unit.sp
+    import androidx.compose.material3.HorizontalDivider
+    import androidx.compose.ui.res.painterResource
+    import androidx.compose.material3.Scaffold
+    import com.Login1.GiaoDienLogin.R
 
 @Preview
 @Composable
@@ -67,6 +91,7 @@ fun HomeScreen(navController: NavHostController? = null) {
                         modifier = Modifier.size(60.dp)
                     )
 
+<<<<<<< Updated upstream
                     // Nhóm phải
                     Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
                         Image(
@@ -121,6 +146,44 @@ fun HomeScreen(navController: NavHostController? = null) {
                                 painter = painterResource(id = R.drawable.bell),
                                 contentDescription = "Notification"
                             )
+=======
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFE0E0E0))
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Nhóm trái
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            BottomIconWithText(R.drawable.home, "Trang chủ")
+                            BottomIconWithText(R.drawable.file, "Lịch sử")
+                        }
+
+                        // Nút thêm ở giữa - KHÔNG có chữ, to hơn
+                        Box(
+                            modifier = Modifier
+                                .weight(0.8f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.add),
+                                contentDescription = "Thêm",
+                                modifier = Modifier.size(65.dp)
+                            )
+                        }
+
+                        // Nhóm phải
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            BottomIconWithText(R.drawable.wallet, "Ngân sách")
+                            BottomIconWithText(R.drawable.user, "Người dùng")
+>>>>>>> Stashed changes
                         }
                     }
                 }
