@@ -3,20 +3,13 @@ import sqlite3
 import os
 from datetime import datetime
 
-# Lấy đường dẫn tương đối từ vị trí file hiện tại
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
-DB_PATH = os.path.join(project_root, 'database', 'login_database.db')
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Tạo thư mục database nếu chưa tồn tại
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+from database import get_db_connection
 
 account_bp = Blueprint('account', __name__)
-
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 # Tạo tài khoản mới
 @account_bp.route('/api/accounts', methods=['POST'])

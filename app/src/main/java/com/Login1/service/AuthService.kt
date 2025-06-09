@@ -1,5 +1,6 @@
-package com.Login1.GiaoDienLogin.service
+package com.Login1.service
 
+import android.util.Log
 import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
@@ -62,7 +63,7 @@ class AuthService {
             var connection: HttpURLConnection? = null
             return try {
                 val url = URL("$BASE_URL/register")
-                android.util.Log.d("AuthService", "Trying to connect to: $url") // Better Android logging
+                Log.d("AuthService", "Trying to connect to: $url") // Better Android logging
                 connection = url.openConnection() as HttpURLConnection
                 connection.apply {
                     requestMethod = "POST"
@@ -77,13 +78,13 @@ class AuthService {
                     put("password", password)
                     put("rePassword", rePassword)
                 }.toString()
-                android.util.Log.d("AuthService", "Sending data: $jsonInputString")
+                Log.d("AuthService", "Sending data: $jsonInputString")
 
                 OutputStreamWriter(connection.outputStream).use { it.write(jsonInputString) }
 
-                android.util.Log.d("AuthService", "Response code: ${connection.responseCode}")
+                Log.d("AuthService", "Response code: ${connection.responseCode}")
                 val response = readResponse(connection)
-                android.util.Log.d("AuthService", "Response: $response")
+                Log.d("AuthService", "Response: $response")
 
                 if (connection.responseCode in 200..299) {
                     Result.success(response)
@@ -91,7 +92,7 @@ class AuthService {
                     Result.failure(Exception(response.getString("message")))
                 }
             } catch (e: Exception) {
-                android.util.Log.e("AuthService", "Error: ${e.message}", e)
+                Log.e("AuthService", "Error: ${e.message}", e)
                 e.printStackTrace()
                 Result.failure(Exception("Không thể kết nối đến server: ${e.message}"))
             } finally {

@@ -1,8 +1,8 @@
 import sqlite3
 import os
 
-# Đường dẫn tuyệt đối tới file database
-DB_PATH = r"C:\Users\ADMIN\StudioProjects\GiaoDienLogin\app\src\main\database\login_database.db"
+# Đường dẫn tương đối tới file database
+DB_PATH = r"../database/login_database.db"
 
 def print_db_info():
     print(f"[DEBUG] DB_PATH: {DB_PATH}")

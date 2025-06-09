@@ -6,7 +6,7 @@ import logging
 DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'database')
 DB_PATH = os.path.join(DB_DIR, 'login_database.db')
 
-def get_db_connection():
+def get_db_connection(db_path=DB_PATH):
     """Tạo và trả về kết nối đến database"""
     # Đảm bảo thư mục database tồn tại
     os.makedirs(DB_DIR, exist_ok=True)
@@ -25,7 +25,6 @@ def init_db():
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS Users (
                 UserID INTEGER PRIMARY KEY AUTOINCREMENT,
-                Username TEXT NOT NULL,
                 Email TEXT UNIQUE NOT NULL,
                 Password TEXT NOT NULL,
                 Created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
