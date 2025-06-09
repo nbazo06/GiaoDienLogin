@@ -34,7 +34,6 @@ def register():
         email = data.get('email', '').strip()
         password = data.get('password', '').strip()
         rePassword = data.get('rePassword', '').strip()
-        username = data.get('username', '').strip() or email.split('@')[0]  # Lấy username từ email nếu không nhập
 
         # Kiểm tra trường bắt buộc
         if not email or not password or not rePassword:
@@ -63,8 +62,8 @@ def register():
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
         cursor.execute(
-            'INSERT INTO Users (Username, Email, Password) VALUES (?, ?, ?)',
-            (username, email, hashed_password)
+            'INSERT INTO Users (Email, Password) VALUES (?, ?)',
+            (email, hashed_password)
         )
         user_id = cursor.lastrowid
         conn.commit()

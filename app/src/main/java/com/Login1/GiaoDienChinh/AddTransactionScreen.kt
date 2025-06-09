@@ -24,14 +24,15 @@ import android.widget.DatePicker
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
 import java.util.*
+import androidx.navigation.NavHostController
 
 data class DanhMucItem(val icon: Int, val title: String)
 data class NguonTienItem(val icon: Int, val title: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Preview
+//@Preview
 @Composable
-fun AddTransactionScreen() {
+fun AddTransactionScreen(navController: NavHostController) {
     var selectedTab by remember { mutableStateOf("Chi tiêu") }
     var soTien by remember { mutableStateOf("") }
     var danhMuc by remember { mutableStateOf("") }
