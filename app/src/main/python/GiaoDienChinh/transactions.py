@@ -3,17 +3,13 @@ import sqlite3
 from datetime import datetime
 import os
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_DIR = os.path.join(BASE_DIR, '..', '..', 'database')
-DB_PATH = os.path.join(DB_DIR, 'login_database.db')
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from database import get_db_connection
 
 transactions_bp = Blueprint('transactions', __name__)
-
-
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 # Tạo transaction mới
 @transactions_bp.route('/api/transactions', methods=['POST'])

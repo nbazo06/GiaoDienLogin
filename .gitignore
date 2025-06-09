@@ -14,4 +14,4 @@
 .cxx
 local.properties
 **/__pycache__/
-*.pyc
+**.pyc
