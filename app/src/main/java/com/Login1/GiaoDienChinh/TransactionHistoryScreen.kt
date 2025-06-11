@@ -22,6 +22,7 @@ import com.Login1.GiaoDienLogin.R
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
+import androidx.navigation.NavHostController
 
 
 //Anh trích giao dịch từ database nha, đây là em để fake data
@@ -241,6 +242,9 @@ fun TransactionHistoryContent(transactionsByDate: Map<String, List<GiaoDich>>) {
         LichSuGiaoDichScreen(transactionsByDate)
     }
 }
+
+@Composable
+fun BottomNavigationBar() {}
 
 @Composable
 fun LichSuGiaoDichScreen(transactionsByDate: Map<String, List<GiaoDich>>) {
