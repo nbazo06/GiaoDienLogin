@@ -9,10 +9,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database import get_db_connection
 
-transactions_bp = Blueprint('transactions', __name__)
+transactions_bp = Blueprint('transactions', __name__, url_prefix='/api')
 
 # Tạo transaction mới
-@transactions_bp.route('/api/transactions', methods=['POST'])
+@transactions_bp.route('/transactions', methods=['POST'])
 def create_transaction():
     data = request.get_json()
     account_id = data.get('account_id')
@@ -20,6 +20,7 @@ def create_transaction():
     amount = data.get('amount')
     category_id = data.get('category_id')
     transaction_date = data.get('transaction_date') or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    money_source = data.get('money_source', '')
     note = data.get('note', '')
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -34,17 +35,13 @@ def create_transaction():
     except Exception:
         return jsonify({'success': False, 'message': 'Số tiền không hợp lệ'}), 400
 
-    # Kiểm tra transaction_type hợp lệ
-    if transaction_type not in ('Income', 'Expense'):
-        return jsonify({'success': False, 'message': 'Loại giao dịch không hợp lệ'}), 400
-
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO Transactions (AccountID, Transaction_type, Amount, CategoryID, Transaction_date, Created_at, Updated_at, Note)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (account_id, transaction_type, amount, category_id, transaction_date, now, now, note))
+            INSERT INTO Transactions (AccountID, Transaction_type, Amount, CategoryID, Transaction_date, Money_source, Created_at, Updated_at, Note)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (account_id, transaction_type, amount, category_id, transaction_date, money_source, now, now, note))
         conn.commit()
         transaction_id = cursor.lastrowid
         conn.close()

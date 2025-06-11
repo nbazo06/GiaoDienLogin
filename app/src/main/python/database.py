@@ -72,7 +72,7 @@ def init_db():
         ''')
         print("Category table created or already exists.")
 
-        # Transaction table
+        # Transactions table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS Transactions (
                 TransactionID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,6 +81,7 @@ def init_db():
                 Amount REAL NOT NULL,
                 CategoryID INTEGER NOT NULL,
                 Transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                Money_source TEXT NOT NULL,
                 Created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 Updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 Note TEXT,
