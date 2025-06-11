@@ -48,10 +48,6 @@ def register():
         if cursor.fetchone():
             return jsonify({'success': False, 'message': 'Email đã được sử dụng'}), 400
 
-        cursor.execute('SELECT * FROM Users WHERE Username = ?', (username,))
-        if cursor.fetchone():
-            return jsonify({'success': False, 'message': 'Tên đăng nhập đã được sử dụng'}), 400
-
         is_valid_password, password_error = validate_password(password)
         if not is_valid_password:
             return jsonify({'success': False, 'message': password_error}), 400

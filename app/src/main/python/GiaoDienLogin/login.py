@@ -30,7 +30,7 @@ def login():
         stored_password = user['Password']  # Chữ P hoa
         # Nếu lưu là string, phải encode lại khi check
         if bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
-            return jsonify({'success': True, 'message': 'Đăng nhập thành công'}), 200
+            return jsonify({'success': True, 'AccountID': user['UserID'], 'message': 'Đăng nhập thành công'}), 200
         else:
             return jsonify({'success': False, 'message': 'Mật khẩu không chính xác'}), 401
 

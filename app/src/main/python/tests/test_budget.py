@@ -13,7 +13,7 @@ import atexit
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import g
-from GiaoDienChinhBE import create_app
+from GiaoDienChinh import create_app
 from database import init_db
 from register import register_bp
 from login import login_bp
