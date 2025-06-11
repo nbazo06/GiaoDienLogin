@@ -10,6 +10,7 @@ import com.Login1.GiaoDienLogin.ForgotPasswordScreen
 import com.Login1.GiaoDienLogin.EmailConfirmation
 import com.Login1.GiaoDienLogin.NewPasswordScreen
 import com.Login1.GiaoDienChinh.HomeScreen
+import com.Login1.GiaoDienChinh.AddTransactionScreen
 
 @Composable
 fun SetupNavGraph(
@@ -37,8 +38,13 @@ fun SetupNavGraph(
             val email = backStackEntry.arguments?.getString("email") ?: ""
             NewPasswordScreen(navController = navController, email)
         }
-        composable(route = "home_screen") {
-            HomeScreen(navController = navController)
+        composable(route = "home_screen/{account_id}") { backStackEntry ->
+            val account_id = backStackEntry.arguments?.getString("account_id") ?: ""
+            HomeScreen(navController = navController, account_id)
+        }
+        composable(route = "add_transaction_screen/{account_id}") { backStackEntry ->
+            val account_id = backStackEntry.arguments?.getString("account_id") ?: ""
+            AddTransactionScreen(navController = navController, account_id)
         }
     }
 } 

@@ -15,25 +15,32 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Login1.GiaoDienLogin.R
 import android.app.DatePickerDialog
+import android.util.Log
 import android.widget.DatePicker
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import java.util.*
 import androidx.navigation.NavHostController
+import com.Login1.service.AuthService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 data class DanhMucItem(val icon: Int, val title: String)
 data class NguonTienItem(val icon: Int, val title: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
-//@Preview
+
 @Composable
-fun AddTransactionScreen(navController: NavHostController) {
+fun AddTransactionScreen(navController: NavHostController, account_id: String) {
     var selectedTab by remember { mutableStateOf("Chi tiêu") }
+    var transaction_type by remember { mutableStateOf("") }
     var soTien by remember { mutableStateOf("") }
     var danhMuc by remember { mutableStateOf("") }
     var ngayThang by remember { mutableStateOf("") }
@@ -107,6 +114,32 @@ fun AddTransactionScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            var successMessage by remember { mutableStateOf<String?>(null) }
+            var errorMessage by remember { mutableStateOf<String?>(null) }
+            // Hiển thị thông báo thành công nếu có
+            successMessage?.let { success ->
+                Text(
+                    text = success,
+                    color = Color.Green,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Hiển thị thông báo lỗi nếu có
+            errorMessage?.let { error ->
+                Text(
+                    text = error,
+                    color = Color.Red,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             Card(
                 elevation = CardDefaults.elevatedCardElevation(4.dp),
                 shape = RoundedCornerShape(12.dp),
@@ -129,7 +162,10 @@ fun AddTransactionScreen(navController: NavHostController) {
                             .padding(4.dp)
                     ) {
                         Button(
-                            onClick = { selectedTab = "Chi tiêu" },
+                            onClick = {
+                                selectedTab = "Chi tiêu"
+                                transaction_type = "Expense"
+                            },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (selectedTab == "Chi tiêu") Color.White else Color.LightGray.copy(alpha = 0.8f)
                             ),
@@ -142,7 +178,10 @@ fun AddTransactionScreen(navController: NavHostController) {
                         }
 
                         Button(
-                            onClick = { selectedTab = "Thu nhập" },
+                            onClick = {
+                                selectedTab = "Thu nhập"
+                                transaction_type = "Income"
+                                      },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (selectedTab == "Chi tiêu") Color.LightGray.copy(alpha = 0.8f) else Color.White
                             ),
@@ -158,7 +197,7 @@ fun AddTransactionScreen(navController: NavHostController) {
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Các trường nhập
+                    // Nhập số tiền
                     OutlinedTextField(
                         value = soTien,
                         onValueChange = { soTien = it },
@@ -176,6 +215,7 @@ fun AddTransactionScreen(navController: NavHostController) {
 
                     Spacer(modifier = Modifier.height(20.dp))
 
+                    // Dropdown danh mục
                     ExposedDropdownMenuBox(
                         expanded = expanded,
                         onExpandedChange = { expanded = !expanded }
@@ -228,34 +268,36 @@ fun AddTransactionScreen(navController: NavHostController) {
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-
+                    
+                    // Nút nhanh chọn danh mục
                     QuickCategoryButtons(onCategorySelected = { selectedCategory -> danhMuc = selectedCategory
                         expanded = false
                     })
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Box(
+                    // Chọn ngày giao dịch
+                    OutlinedTextField(
+                        value = ngayThang,
+                        onValueChange = {},
+                        label = requiredLabel("Ngày giao dịch"),
+                        placeholder = { Text("Chọn ngày...", fontSize = 20.sp) },
+                        singleLine = true,
+                        readOnly = true,
+                        enabled = false, // Disable TextField interaction
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { datePickerDialog.show() }
-                    ) {
-                        OutlinedTextField(
-                            value = ngayThang,
-                            onValueChange = {},
-                            label = requiredLabel("Ngày giao dịch"),
-                            placeholder = { Text("Chọn ngày...", fontSize = 20.sp) },
-                            singleLine = true,
-                            readOnly = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = TextStyle(fontSize = 18.sp),
-                            shape = RoundedCornerShape(15.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.Gray,
-                                unfocusedBorderColor = Color.LightGray
-                            )
+                            .clickable { datePickerDialog.show() }, // Chỉ giữ một clickable modifier
+                        textStyle = TextStyle(fontSize = 18.sp),
+                        shape = RoundedCornerShape(15.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color.Gray,
+                            unfocusedBorderColor = Color.LightGray,
+                            disabledTextColor = Color.Black, // Giữ màu text khi disabled
+                            disabledBorderColor = Color.LightGray, // Giữ màu border khi disabled
+                            disabledLabelColor = Color.Gray // Giữ màu label khi disabled
                         )
-                    }
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -332,7 +374,33 @@ fun AddTransactionScreen(navController: NavHostController) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { /* TODO */ },
+                onClick = {
+                    // Reset messages
+                    errorMessage = null
+                    successMessage = null
+                    CoroutineScope(Dispatchers.IO).launch {
+                        AuthService.addTransaction(account_id, transaction_type, soTien, danhMuc, ngayThang, nguonTien, ghiChu).fold(
+                            onSuccess = { response ->
+                                CoroutineScope(Dispatchers.Main).launch {
+                                    if (response.getBoolean("success")) {
+                                        successMessage = "Thêm giao dịch thành công"
+                                        delay(500)
+                                        navController.navigate("home_screen/${account_id}") {
+                                            popUpTo("add_transaction_screen") { inclusive = true }
+                                        }
+                                    } else { 
+                                        errorMessage = response.getString("message")
+                                    }
+                                }
+                            },
+                            onFailure = { exception ->
+                                CoroutineScope(Dispatchers.Main).launch {
+                                    errorMessage = exception.message ?: "Lỗi không xác định"
+                                }
+                            }
+                        )
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),

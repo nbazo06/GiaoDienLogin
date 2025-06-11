@@ -21,12 +21,12 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.Login1.GiaoDienLogin.R
 
-@Preview
+//@Preview
 @Composable
-fun HomeScreen(navController: NavHostController? = null) {
+fun HomeScreen(navController: NavHostController, account_id: String) {
     Scaffold(
         bottomBar = {
-            BottomNavigationBar()
+            BottomNavigationBar(navController, account_id)
         }
     ) { paddingValues ->
         Column(
@@ -73,7 +73,7 @@ fun HeaderSection() {
 }
 
 @Composable
-fun BottomNavigationBar() {
+fun BottomNavigationBar(navController: NavHostController, account_id: String) {
     Column {
         HorizontalDivider(color = Color.Black, thickness = 1.dp)
         Row(
@@ -89,7 +89,7 @@ fun BottomNavigationBar() {
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                IconButton(onClick = { /* Xử lý click Home */ }) {
+                IconButton(onClick = { /*Home*/}) {
                     Image(
                         painter = painterResource(id = R.drawable.home),
                         contentDescription = "Home",
@@ -116,7 +116,11 @@ fun BottomNavigationBar() {
 
             // Nút Add lớn hơn, không có label
             IconButton(
-                onClick = { /* Xử lý click Add */ },
+                onClick = {
+                    navController.navigate("add_transaction_screen/${account_id}") {
+                        popUpTo("home_screen") { inclusive = true }
+                    }
+                },
                 modifier = Modifier.size(70.dp)
             ) {
                 Image(

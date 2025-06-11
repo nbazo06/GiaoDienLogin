@@ -48,7 +48,7 @@ import androidx.compose.ui.platform.LocalContext
 
 @Preview
 @Composable
-fun ForgotPasswordScreen(navController: NavHostController? = null)
+fun ForgotPasswordScreen(navController: NavHostController)
 {
     val context = LocalContext.current
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -146,7 +146,7 @@ fun ForgotPasswordScreen(navController: NavHostController? = null)
                                     successMessage = "Đã gửi OTP"
                                     delay(1000)
                                     // Chuyển sang màn hình Email Confirmation
-                                    navController?.navigate("email_confirmation_screen/${email}") {
+                                    navController.navigate("email_confirmation_screen/${email}") {
                                         popUpTo("forgot_password_screen") { inclusive = true }
                                     }
                                 } else {
