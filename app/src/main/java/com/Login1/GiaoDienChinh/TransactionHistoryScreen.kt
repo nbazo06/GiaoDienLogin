@@ -16,6 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Login1.GiaoDienLogin.R
@@ -23,6 +24,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 
 
 //Anh trích giao dịch từ database nha, đây là em để fake data
@@ -36,11 +38,89 @@ data class GiaoDich(
     val thuNhap: Boolean
 )
 
-@Preview
+val nguonTienList = listOf(
+    NguonTienItem(R.drawable.cash, "Tiền mặt"),
+    NguonTienItem(R.drawable.atm, "Ngân hàng")
+)
+
+@Preview(showBackground = true)
 @Composable
-fun TransactionHistoryScreen() {
-    var nguonTien by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf("Tháng này") } // 👈 Thêm dòng này
+fun TransactionHistoryScreenPreview() {
+    val navController = rememberNavController()
+    TransactionHistoryScreen(navController = navController, account_id = "123")
+}
+
+@Composable
+fun NguonTienBox(
+    nguonTien: String,
+    onClick: () -> Unit,
+    expanded: Boolean = false,
+    onDismissRequest: () -> Unit,
+    onSelect: (NguonTienItem) -> Unit
+) {
+    val selectedText = nguonTien.ifBlank { "Chọn nguồn tiền" }
+
+    Box(
+        modifier = Modifier
+            .width(130.dp)
+            .height(40.dp)
+            .background(Color.White, shape = RoundedCornerShape(10.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = selectedText,
+                fontSize = 14.sp,
+                modifier = Modifier.weight(1f)
+            )
+
+            Image(
+                painter = painterResource(id = R.drawable.reorder),
+                contentDescription = "Dropdown Icon",
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = onDismissRequest
+        ) {
+            nguonTienList.forEach { item ->
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = painterResource(id = item.iconResid),
+                                contentDescription = item.ten,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = item.ten)
+                        }
+                    },
+                    onClick = {
+                        onSelect(item)
+                        onDismissRequest()
+                    }
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+fun TransactionHistoryScreen(navController: NavHostController, account_id: String) {
+    var nguonTien by remember { mutableStateOf("Tiền mặt") }
+    var selectedFilter by remember { mutableStateOf("Tháng này") } //
+
+    var expandedNguonTien by remember { mutableStateOf(false) }
 
     val formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
     val homNay = LocalDate.now().format(formatter)
@@ -60,7 +140,7 @@ fun TransactionHistoryScreen() {
     )
 
     Scaffold(
-        bottomBar = { BottomNavigationBar() }
+        bottomBar = { BottomNavigationBar(navController, account_id) }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -77,13 +157,18 @@ fun TransactionHistoryScreen() {
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    NguonTienDropdown(
+                    NguonTienBox(
                         nguonTien = nguonTien,
-                        onNguonTienChange = { nguonTien = it }
+                        onClick = { expandedNguonTien = true },
+                        expanded = expandedNguonTien,
+                        onDismissRequest = { expandedNguonTien = false },
+                        onSelect = { item ->
+                            nguonTien = item.ten
+                        }
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp)) // 👈 Thêm khoảng cách giữa "Tổng cộng" và các tab
+                Spacer(modifier = Modifier.height(12.dp)) //
 
                 MonthFilterButtons(
                     selected = selectedFilter,
@@ -96,77 +181,6 @@ fun TransactionHistoryScreen() {
             FilterButtonsRow()
 
             TransactionHistoryContent(fakeData)
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun NguonTienDropdown(
-    nguonTien: String,
-    onNguonTienChange: (String) -> Unit
-) {
-    var expandedNguonTien by remember { mutableStateOf(false) }
-
-    val nguonTienList = listOf(
-        NguonTienItem(R.drawable.cash, "Tiền mặt"),
-        NguonTienItem(R.drawable.atm, "Ngân hàng")
-    )
-
-    ExposedDropdownMenuBox(
-        expanded = expandedNguonTien,
-        onExpandedChange = { expandedNguonTien = !expandedNguonTien }
-    ) {
-        OutlinedTextField(
-            readOnly = true,
-            value = nguonTien,
-            onValueChange = {},
-            placeholder = { Text("Tổng cộng", fontSize = 20.sp) },
-            singleLine = true,
-            modifier = Modifier
-                .width(170.dp)
-                .menuAnchor(),
-            trailingIcon = {
-                Icon(
-                    painter = painterResource(id = R.drawable.reorder),
-                    contentDescription = "Dropdown Icon",
-                    modifier = Modifier.size(24.dp)
-                )
-            },
-            shape = RoundedCornerShape(15.dp),
-            textStyle = TextStyle(fontSize = 20.sp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.White,
-                unfocusedBorderColor = Color.White,
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White,
-                disabledContainerColor = Color.White
-            )
-        )
-
-        ExposedDropdownMenu(
-            expanded = expandedNguonTien,
-            onDismissRequest = { expandedNguonTien = false }
-        ) {
-            nguonTienList.forEach { item ->
-                DropdownMenuItem(
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(id = item.icon),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = item.title)
-                        }
-                    },
-                    onClick = {
-                        onNguonTienChange(item.title)
-                        expandedNguonTien = false
-                    }
-                )
-            }
         }
     }
 }
@@ -218,21 +232,6 @@ fun FilterButtonsRow() {
 }
 
 @Composable
-fun BottomIconWithText(iconRes: Int, label: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(horizontal = 8.dp)
-    ) {
-        Image(
-            painter = painterResource(id = iconRes),
-            contentDescription = label,
-            modifier = Modifier.size(30.dp)
-        )
-        Text(text = label, fontSize = 12.sp)
-    }
-}
-
-@Composable
 fun TransactionHistoryContent(transactionsByDate: Map<String, List<GiaoDich>>) {
     Column(
         modifier = Modifier
@@ -243,8 +242,8 @@ fun TransactionHistoryContent(transactionsByDate: Map<String, List<GiaoDich>>) {
     }
 }
 
-@Composable
-fun BottomNavigationBar() {}
+//@Composable
+//fun BottomNavigationBar() {}
 
 @Composable
 fun LichSuGiaoDichScreen(transactionsByDate: Map<String, List<GiaoDich>>) {

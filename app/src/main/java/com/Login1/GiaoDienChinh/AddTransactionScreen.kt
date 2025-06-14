@@ -19,13 +19,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Login1.GiaoDienLogin.R
 import android.app.DatePickerDialog
-import android.util.Log
 import android.widget.DatePicker
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import java.util.*
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import com.Login1.service.AuthService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,10 +34,19 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 
 data class DanhMucItem(val icon: Int, val title: String)
-data class NguonTienItem(val icon: Int, val title: String)
+data class NguonTienItem(
+    val iconResid: Int,
+    val ten: String
+)
+
+@Preview(showBackground = true)
+@Composable
+fun AddTransactionScreenPreview() {
+    val navController = rememberNavController()
+    AddTransactionScreen(navController = navController, account_id = "123")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
-
 @Composable
 fun AddTransactionScreen(navController: NavHostController, account_id: String) {
     var selectedTab by remember { mutableStateOf("Chi tiêu") }
@@ -335,16 +345,16 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                                     text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Image(
-                                                painter = painterResource(id = item.icon),
+                                                painter = painterResource(id = item.iconResid),
                                                 contentDescription = null,
                                                 modifier = Modifier.size(24.dp)
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
-                                            Text(text = item.title)
+                                            Text(text = item.ten)
                                         }
                                     },
                                     onClick = {
-                                        nguonTien = item.title
+                                        nguonTien = item.ten
                                         expandedNguonTien = false
                                     }
                                 )

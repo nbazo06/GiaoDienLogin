@@ -10,6 +10,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.Login1.GiaoDienChinh.AddTransactionScreen
+import com.Login1.GiaoDienChinh.BudgetScreen
 import com.Login1.navigation.SetupNavGraph
 import com.Login1.GiaoDienChinh.TransactionHistoryScreen
 //import com.Login1.GiaoDienLogin.navigation.SetupNavGraph
@@ -27,7 +28,11 @@ class MainActivity : ComponentActivity() {
                     SetupNavGraph(navController = navController)
                 }
             }
-//            TransactionHistoryScreen()
+//            val navController = rememberNavController()
+////            TransactionHistoryScreen(navController = navController, account_id = "123")
+////            AddTransactionScreen()
+//
+//            BudgetScreen(navController = navController, account_id = "123")
         }
     }
 
