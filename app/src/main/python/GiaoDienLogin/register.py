@@ -62,6 +62,26 @@ def register():
             (email, hashed_password)
         )
         user_id = cursor.lastrowid
+        
+        # Insert default categories
+        default_categories = [
+            ('Ăn uống', 'expense', '2130968613'),
+            ('Giải trí', 'expense', '2130968598'),
+            ('Hóa đơn', 'expense', '2130968584'),
+            ('Chợ, siêu thị', 'expense', '2130968612'),
+            ('Di chuyển', 'expense', '2130968597'),
+            
+            ('Khác', 'expense', '2130968586')
+        ]
+        i = 1
+        for category_name, expense, category_icon in default_categories:
+            cursor.execute('''
+                INSERT INTO Category (UserID, CategoryID, Category_name, Category_type, Category_icon)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_id, i, category_name, expense, category_icon))
+            i += 1
+        
+        
         conn.commit()
         return jsonify({
             'success': True, 

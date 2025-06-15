@@ -31,7 +31,6 @@ def init_db():
                 Updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        print("Users table created or already exists.")
 
         # Account table
         cursor.execute('''
@@ -46,7 +45,6 @@ def init_db():
                 FOREIGN KEY(UserID) REFERENCES User(UserID)
             )
         ''')
-        print("Account table created or already exists.")
         
         # EmailVerification table
         cursor.execute('''
@@ -56,21 +54,30 @@ def init_db():
                 Created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        print("EmailVerification table created or already exists.")
         
         # Category table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS Category (
-                CategoryID INTEGER PRIMARY KEY AUTOINCREMENT,
                 UserID INTEGER NOT NULL,
+                CategoryID INTEGER NOT NULL,
                 Category_name TEXT NOT NULL,
-                Category_type TEXT CHECK(Category_type IN ('income', 'expense')) DEFAULT 'expense',
+                Category_type TEXT NOT NULL,
+                Category_icon TEXT NOT NULL,
                 Created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 Updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY(CategoryID, UserID),
                 FOREIGN KEY(UserID) REFERENCES User(UserID)
             )
         ''')
-        print("Category table created or already exists.")
+        
+        # Category Icon table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS CategoryIcon (
+                IconID INTEGER PRIMARY KEY AUTOINCREMENT,
+                Icon_name TEXT NOT NULL,
+                Icon_path TEXT NOT NULL
+            )
+        ''')
 
         # Transactions table
         cursor.execute('''
@@ -89,7 +96,6 @@ def init_db():
                 FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID)
             )
         ''')
-        print("Transactions table created or already exists.")
 
         # Budget table
         cursor.execute('''
@@ -109,7 +115,6 @@ def init_db():
                 FOREIGN KEY(AccountID) REFERENCES Account(AccountID)
             )
         ''')
-        print("Budget table created or already exists.")
 
         # Notification table
         cursor.execute('''
@@ -126,7 +131,6 @@ def init_db():
                 FOREIGN KEY(UserID) REFERENCES User(UserID)
             )
         ''')
-        print("Notification table created or already exists.")
 
         conn.commit()
         print("Database initialized successfully")

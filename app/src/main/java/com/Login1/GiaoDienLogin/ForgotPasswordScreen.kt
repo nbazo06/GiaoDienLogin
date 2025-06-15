@@ -147,7 +147,7 @@ fun ForgotPasswordScreen(navController: NavHostController)
                                     delay(1000)
                                     // Chuyển sang màn hình Email Confirmation
                                     navController.navigate("email_confirmation_screen/${email}") {
-                                        popUpTo("forgot_password_screen") { inclusive = true }
+                                        launchSingleTop = true
                                     }
                                 } else {
                                     errorMessage = response.getString("message")

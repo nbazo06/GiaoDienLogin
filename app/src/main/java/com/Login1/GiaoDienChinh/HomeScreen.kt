@@ -99,12 +99,18 @@ fun BottomNavigationBar(navController: NavHostController, account_id: String) {
                 Text("Trang chủ", fontSize = 12.sp, color = Color.Black)
             }
 
-            // Nút File với label
+            // Nút History với label
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                IconButton(onClick = { /* Xử lý click File */ }) {
+                IconButton(
+                    onClick = {
+                        navController.navigate("transaction_history_screen/${account_id}") {
+                            launchSingleTop = true
+                        }
+                    }
+                ) {
                     Image(
                         painter = painterResource(id = R.drawable.file),
                         contentDescription = "File",

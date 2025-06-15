@@ -18,7 +18,7 @@ def create_transaction():
     account_id = data.get('account_id')
     transaction_type = data.get('transaction_type')  # "Income" hoặc "Expense"
     amount = data.get('amount')
-    category_id = data.get('category_id')
+    category_id = data.get('CategoryID')
     transaction_date = data.get('transaction_date') or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     money_source = data.get('money_source', '')
     note = data.get('note', '')
@@ -27,13 +27,6 @@ def create_transaction():
     if not all([account_id, transaction_type, amount, category_id]):
         return jsonify({'success': False, 'message': 'Thiếu thông tin bắt buộc'}), 400
 
-    # Kiểm tra amount là số dương
-    try:
-        amount = float(amount)
-        if amount <= 0:
-            return jsonify({'success': False, 'message': 'Số tiền phải lớn hơn 0'}), 400
-    except Exception:
-        return jsonify({'success': False, 'message': 'Số tiền không hợp lệ'}), 400
 
     try:
         conn = get_db_connection()
@@ -50,28 +43,31 @@ def create_transaction():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # Lấy tất cả transaction (có thể lọc theo account_id, category_id, type, date)
-@transactions_bp.route('/api/transactions', methods=['GET'])
+@transactions_bp.route('/transactions', methods=['GET'])
 def get_transactions():
-    account_id = request.args.get('account_id')
-    category_id = request.args.get('category_id')
-    transaction_type = request.args.get('transaction_type')
-    query = 'SELECT * FROM Transactions WHERE 1=1'
-    params = []
-    if account_id:
-        query += ' AND AccountID = ?'
-        params.append(account_id)
-    if category_id:
-        query += ' AND CategoryID = ?'
-        params.append(category_id)
-    if transaction_type:
-        query += ' AND Transaction_type = ?'
-        params.append(transaction_type)
+    user_id = request.args.get('user_id')
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute(query, params)
+        
+        # Sử dụng JOIN để lấy thêm Category_name và Category_icon từ bảng Category
+        cursor.execute('''
+            SELECT 
+                t.Transaction_date,
+                t.Amount,
+                t.Transaction_type,
+                c.Category_name,
+                c.Category_icon
+            FROM Transactions t
+            JOIN Category c ON t.CategoryID = c.CategoryID
+            WHERE t.AccountID = ?
+            ORDER BY t.Transaction_date DESC
+        ''', (user_id,))
+        
         transactions = [dict(row) for row in cursor.fetchall()]
         conn.close()
+        
         return jsonify({'success': True, 'transactions': transactions}), 200
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500

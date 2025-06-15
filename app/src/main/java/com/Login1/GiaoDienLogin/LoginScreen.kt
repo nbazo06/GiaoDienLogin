@@ -205,7 +205,7 @@ fun LoginScreen(navController: NavHostController) {
                                 if (response.getBoolean("success")) {
                                     successMessage = "Đăng nhập thành công"
                                     delay(1000)
-                                    navController.navigate("home_screen/${response.getString("AccountID")}") {
+                                    navController.navigate("home_screen/${response.getString("user_id")}") {
                                         popUpTo("login_screen") { inclusive = true }
                                     }
                                 } else {

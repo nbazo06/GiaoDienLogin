@@ -15,6 +15,7 @@ import com.Login1.navigation.SetupNavGraph
 import com.Login1.GiaoDienChinh.TransactionHistoryScreen
 //import com.Login1.GiaoDienLogin.navigation.SetupNavGraph
 import com.Login1.GiaoDienLogin.ui.theme.GiaoDienLoginTheme
+import com.Login1.service.insertDrawableIconsIntoDatabase
 
 class MainActivity : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -34,6 +35,7 @@ class MainActivity : ComponentActivity() {
 //
 //            BudgetScreen(navController = navController, account_id = "123")
         }
+        insertDrawableIconsIntoDatabase(this)
     }
 
 }
