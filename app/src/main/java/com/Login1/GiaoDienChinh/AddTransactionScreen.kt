@@ -22,8 +22,6 @@ import android.app.DatePickerDialog
 import android.widget.DatePicker
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import java.util.*
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -32,25 +30,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import com.Login1.service.Category
+import kotlinx.coroutines.withContext
 
-data class DanhMucItem(val icon: Int, val title: String)
-data class NguonTienItem(
-    val iconResid: Int,
-    val ten: String
-)
-
-@Preview(showBackground = true)
-@Composable
-fun AddTransactionScreenPreview() {
-    val navController = rememberNavController()
-    AddTransactionScreen(navController = navController, account_id = "123")
-}
+data class NguonTienItem(val icon: Int, val title: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTransactionScreen(navController: NavHostController, account_id: String) {
     var selectedTab by remember { mutableStateOf("Chi tiêu") }
-    var transaction_type by remember { mutableStateOf("") }
+    var transaction_type by remember { mutableStateOf("expense") }
     var soTien by remember { mutableStateOf("") }
     var danhMuc by remember { mutableStateOf("") }
     var ngayThang by remember { mutableStateOf("") }
@@ -59,14 +48,28 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
     var expanded by remember { mutableStateOf(false) }
     var expandedNguonTien by remember { mutableStateOf(false) }
 
-    val danhMucList = listOf(
-        DanhMucItem(R.drawable.ramen, "Ăn uống"),
-        DanhMucItem(R.drawable.multimedia, "Giải trí"),
-        DanhMucItem(R.drawable.bill, "Hóa đơn"),
-        DanhMucItem(R.drawable.onlineshopping, "Chợ, siêu thị"),
-        DanhMucItem(R.drawable.motorcycle, "Di chuyển"),
-        DanhMucItem(R.drawable.ellipsis, "Khác")
-    )
+    var danhMucList by remember { mutableStateOf<List<Category>>(emptyList()) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Lấy danh mục từ backend
+    LaunchedEffect(account_id) {
+        CoroutineScope(Dispatchers.IO).launch {
+            AuthService.getCategories(account_id).fold(
+                onSuccess = { fetchedCategories ->
+                    withContext(Dispatchers.Main) {
+                        danhMucList = fetchedCategories
+                        Log.d("AddTransactionScreen", "Danh mục: $danhMucList")
+                    }
+                },
+                onFailure = { exception ->
+                    withContext(Dispatchers.Main) {
+                        errorMessage = exception.message
+                        Log.e("AddTransactionScreen", "Lỗi: ${exception.message}")
+                    }
+                }
+            )
+        }
+    }
 
     val nguonTienList = listOf(
         NguonTienItem(R.drawable.cash, "Tiền mặt"),
@@ -86,7 +89,7 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
     val datePickerDialog = DatePickerDialog(
         context,
         { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
-            ngayThang = "$selectedDay/${selectedMonth + 1}/$selectedYear"
+            ngayThang = "%02d-%02d-%d".format(selectedDay, selectedMonth + 1, selectedYear)
         }, year, month, day
     )
 
@@ -124,32 +127,6 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            var successMessage by remember { mutableStateOf<String?>(null) }
-            var errorMessage by remember { mutableStateOf<String?>(null) }
-            // Hiển thị thông báo thành công nếu có
-            successMessage?.let { success ->
-                Text(
-                    text = success,
-                    color = Color.Green,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            // Hiển thị thông báo lỗi nếu có
-            errorMessage?.let { error ->
-                Text(
-                    text = error,
-                    color = Color.Red,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
             Card(
                 elevation = CardDefaults.elevatedCardElevation(4.dp),
                 shape = RoundedCornerShape(12.dp),
@@ -174,7 +151,7 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                         Button(
                             onClick = {
                                 selectedTab = "Chi tiêu"
-                                transaction_type = "Expense"
+                                transaction_type = "expense"
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (selectedTab == "Chi tiêu") Color.White else Color.LightGray.copy(alpha = 0.8f)
@@ -190,7 +167,7 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                         Button(
                             onClick = {
                                 selectedTab = "Thu nhập"
-                                transaction_type = "Income"
+                                transaction_type = "income"
                                       },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (selectedTab == "Chi tiêu") Color.LightGray.copy(alpha = 0.8f) else Color.White
@@ -255,24 +232,31 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                             expanded = expanded,
                             onDismissRequest = { expanded = false }
                         ) {
-                            danhMucList.forEach { item ->
+                            if (danhMucList.isEmpty()) {
                                 DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Image(
-                                                painter = painterResource(id = item.icon),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(text = item.title)
-                                        }
-                                    },
-                                    onClick = {
-                                        danhMuc = item.title
-                                        expanded = false
-                                    }
+                                    text = { Text("Không có danh mục nào") },
+                                    onClick = { expanded = false }
                                 )
+                            } else {
+                                danhMucList.forEach { item ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Image(
+                                                    painter = painterResource(id = item.icon),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(text = item.title)
+                                            }
+                                        },
+                                        onClick = {
+                                            danhMuc = item.id
+                                            expanded = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -385,27 +369,27 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
 
             Button(
                 onClick = {
-                    // Reset messages
-                    errorMessage = null
-                    successMessage = null
+
                     CoroutineScope(Dispatchers.IO).launch {
                         AuthService.addTransaction(account_id, transaction_type, soTien, danhMuc, ngayThang, nguonTien, ghiChu).fold(
                             onSuccess = { response ->
                                 CoroutineScope(Dispatchers.Main).launch {
                                     if (response.getBoolean("success")) {
-                                        successMessage = "Thêm giao dịch thành công"
+
                                         delay(500)
                                         navController.navigate("home_screen/${account_id}") {
                                             popUpTo("add_transaction_screen") { inclusive = true }
                                         }
-                                    } else { 
-                                        errorMessage = response.getString("message")
-                                    }
+                                    } else {
+                                        //
+                                        }
+
                                 }
                             },
+
                             onFailure = { exception ->
                                 CoroutineScope(Dispatchers.Main).launch {
-                                    errorMessage = exception.message ?: "Lỗi không xác định"
+                                    //errorMessage = exception.message ?: "Lỗi không xác định"
                                 }
                             }
                         )
@@ -449,9 +433,9 @@ fun QuickCategoryButtons(onCategorySelected: (String) -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            CategoryButton(R.drawable.ramen, "Ăn uống") { onCategorySelected("Ăn uống") }
-            CategoryButton(R.drawable.onlineshopping, "Chợ, siêu thị") { onCategorySelected("Chợ, siêu thị") }
-            CategoryButton(R.drawable.bill, "Hóa đơn") { onCategorySelected("Hóa đơn") }
+            CategoryButton(R.drawable.ramen, "Ăn uống") { onCategorySelected("1") }
+            CategoryButton(R.drawable.onlineshopping, "Chợ, siêu thị") { onCategorySelected("4") }
+            CategoryButton(R.drawable.bill, "Hóa đơn") { onCategorySelected("3") }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -459,7 +443,7 @@ fun QuickCategoryButtons(onCategorySelected: (String) -> Unit) {
         Row(
             modifier = Modifier.fillMaxWidth()
         ) {
-            CategoryButton(R.drawable.multimedia, "Giải trí") { onCategorySelected("Giải trí") }
+            CategoryButton(R.drawable.multimedia, "Giải trí") { onCategorySelected("2") }
         }
     }
 }

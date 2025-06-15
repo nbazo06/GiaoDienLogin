@@ -207,7 +207,7 @@ fun RegisterScreen(navController: NavHostController) {
                                 if (response.getBoolean("success")) {
                                     successMessage = "Đăng ký thành công"
                                     delay(1000)
-                                    navController.navigate("login_screen") {
+                                    navController.navigate("home_screen/${response.getString("user_id")}") {
                                         popUpTo("register_screen") { inclusive = true }
                                     }
                                 } else {

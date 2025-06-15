@@ -17,6 +17,7 @@ from GiaoDienLogin.emailconfirmation import email_confirmation_bp
 from GiaoDienLogin.newpassword import new_password_bp
 
 from GiaoDienChinh.transactions import transactions_bp
+from GiaoDienChinh.category import category_bp
 
 from database import init_db, get_db_connection
 
@@ -32,6 +33,7 @@ app.register_blueprint(new_password_bp)
 
 # Đăng ký các blueprint của GiaoDienChinh
 app.register_blueprint(transactions_bp)
+app.register_blueprint(category_bp)
 
 @app.before_request
 def before_request():
