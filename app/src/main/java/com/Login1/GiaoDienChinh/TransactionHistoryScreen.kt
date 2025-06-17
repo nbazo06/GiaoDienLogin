@@ -27,65 +27,19 @@ import androidx.navigation.NavHostController
 import com.Login1.service.AuthService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import androidx.compose.ui.text.style.TextAlign
 import android.util.Log
 import androidx.navigation.compose.rememberNavController
-
-
-data class GiaoDich(
-    val ngay: String,
-    val tenLoai: String,
-    val soTien: Int,
-    val iconRes: Int,
-    val thuNhap: Boolean
-)
-
-suspend fun getTransactions(userId: String): Result<Map<String, List<GiaoDich>>> {
-    return withContext(Dispatchers.IO) {
-        try {
-            val response = AuthService.get("${AuthService.BASE_URL}/transactions?user_id=$userId")
-            if (response.getBoolean("success")) {
-                val transactions = response.getJSONArray("transactions")
-                val groupedTransactions = (0 until transactions.length())
-                    .map { i -> transactions.getJSONObject(i) }
-                    .map { it.toGiaoDich() }
-                    .groupBy { it.ngay }
-                Result.success(groupedTransactions)
-            } else {
-                Result.failure(Exception(response.getString("message")))
-            }
-        } catch (e: Exception) {
-            Log.e("TransactionHistory", "Error: ${e.message}", e)
-            Result.failure(e)
-        }
-    }
-}
-
-// Extension function để chuyển đổi JSONObject thành GiaoDich
-private fun JSONObject.toGiaoDich(): GiaoDich {
-    val rawDate = getString("Transaction_date") // Lấy ngày từ JSON
-    val formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy") // Định dạng ngày tháng khớp với dữ liệu
-    val parsedDate = LocalDate.parse(rawDate, formatter) // Chuyển đổi sang LocalDate
-
-    return GiaoDich(
-        ngay = parsedDate.format(formatter),
-        tenLoai = getString("Category_name"),
-        soTien = getInt("Amount"),
-        iconRes = getInt("Category_icon"),
-        thuNhap = getString("Transaction_type") == "income"
-    )
-}
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import com.Login1.service.GiaoDich
 
 //@Preview
 @Composable
-fun TransactionHistoryScreen(navController: NavHostController, userId: String) {
+fun TransactionHistoryScreen(navController: NavHostController, account_id: String) {
     var nguonTien by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("Tháng này") }
 
     var transactions by remember { mutableStateOf<Map<String, List<GiaoDich>>>(emptyMap()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
     var expandedNguonTien by remember { mutableStateOf(false) }
 
     val nguonTienList = listOf(
@@ -94,28 +48,25 @@ fun TransactionHistoryScreen(navController: NavHostController, userId: String) {
     )
 
     // Load transactions
-    LaunchedEffect(userId) {
-        try {
-            getTransactions(userId).fold(
-                onSuccess = { result ->
-                    transactions = result
-                    isLoading = false
+    LaunchedEffect(account_id) {
+        CoroutineScope(Dispatchers.IO).launch {
+            AuthService.getTransactions(account_id).fold(
+                onSuccess = { fetchedCategories ->
+                    withContext(Dispatchers.Main) {
+                        transactions = fetchedCategories
+                    }
                 },
-                onFailure = { e ->
-                    error = e.message
-                    isLoading = false
-                    e.printStackTrace()
+                onFailure = { exception ->
+                    withContext(Dispatchers.Main) {
+                        Log.e("AddTransactionScreen", "Lỗi: ${exception.message}")
+                    }
                 }
             )
-        } catch (e: Exception) {
-            error = "Lỗi: ${e.message}"
-            isLoading = false
-            e.printStackTrace()
         }
     }
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(navController, userId) }
+        bottomBar = { BottomNavigationBar(navController, account_id) }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -160,7 +111,7 @@ fun TransactionHistoryScreen(navController: NavHostController, userId: String) {
 @Composable
 fun TransactionHistoryScreenPreview() {
     val navController = rememberNavController()
-    TransactionHistoryScreen(navController = navController, userId = "123")
+    TransactionHistoryScreen(navController = navController, account_id = "123")
 }
 
 //@OptIn(ExperimentalMaterial3Api::class)

@@ -23,6 +23,8 @@ import android.util.Log
 import android.widget.DatePicker
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import java.util.*
 import androidx.navigation.NavHostController
@@ -34,6 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.Login1.service.Category
 import kotlinx.coroutines.withContext
+import java.text.DecimalFormat
 
 @Preview(showBackground = true)
 @Composable
@@ -47,18 +50,19 @@ fun AddTransactionScreenPreview() {
 fun AddTransactionScreen(navController: NavHostController, account_id: String) {
     var selectedTab by remember { mutableStateOf("Chi tiêu") }
     var transaction_type by remember { mutableStateOf("expense") }
-    var soTien by remember { mutableStateOf("") }
+    var soTienRaw by remember { mutableStateOf("") }
     var danhMuc by remember { mutableStateOf("") }
     var ngayThang by remember { mutableStateOf("") }
     var nguonTien by remember { mutableStateOf("") }
     var ghiChu by remember { mutableStateOf("") }
+
+    var soTienText by remember { mutableStateOf(TextFieldValue(text = "", selection = TextRange(0))) }
+    var danhMucHienThi by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     var expandedNguonTien by remember { mutableStateOf(false) }
 
-    var danhMucList by remember { mutableStateOf<List<Category>>(emptyList()) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
     // Lấy danh mục từ backend
+    var danhMucList by remember { mutableStateOf<List<Category>>(emptyList()) }
     LaunchedEffect(account_id) {
         CoroutineScope(Dispatchers.IO).launch {
             AuthService.getCategories(account_id).fold(
@@ -70,7 +74,6 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                 },
                 onFailure = { exception ->
                     withContext(Dispatchers.Main) {
-                        errorMessage = exception.message
                         Log.e("AddTransactionScreen", "Lỗi: ${exception.message}")
                     }
                 }
@@ -115,7 +118,11 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = {}) {
+                IconButton(onClick = {
+                    navController.navigate("home_screen/${account_id}") {
+                        launchSingleTop = true
+                    }
+                }) {
                     Image(
                         painter = painterResource(id = R.drawable.backbutton),
                         contentDescription = "Back",
@@ -193,8 +200,20 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
 
                     // Nhập số tiền
                     OutlinedTextField(
-                        value = soTien,
-                        onValueChange = { soTien = it },
+                        value = soTienText,
+                        onValueChange = { input ->
+                            val digitsOnly = input.text.filter { it.isDigit() }
+
+                            soTienRaw = digitsOnly
+
+                            val formatted = DecimalFormat("#,###").format(digitsOnly).replace(",", ".")
+
+                            // Cập nhật TextFieldValue và đặt dấu nháy về cuối
+                            soTienText = TextFieldValue(
+                                text = formatted,
+                                selection = TextRange(formatted.length)
+                            )
+                        },
                         label = requiredLabel("Số tiền"),
                         placeholder = { Text("Nhập số tiền...", fontSize = 20.sp) },
                         singleLine = true,
@@ -216,7 +235,7 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                     ) {
                         OutlinedTextField(
                             readOnly = true,
-                            value = danhMuc,
+                            value = danhMucHienThi,
                             onValueChange = {},
                             label = requiredLabel("Danh mục"),
                             placeholder = { Text("Chọn danh mục...", fontSize = 20.sp) },
@@ -260,6 +279,7 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                                         },
                                         onClick = {
                                             danhMuc = item.id
+                                            danhMucHienThi = item.title
                                             expanded = false
                                         }
                                     )
@@ -269,11 +289,15 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Nút nhanh chọn danh mục
-                    QuickCategoryButtons(onCategorySelected = { selectedCategory -> danhMuc = selectedCategory
-                        expanded = false
-                    })
+
+                    QuickCategoryButtons(
+                        danhMucList = danhMucList,
+                        onCategorySelected = { item ->
+                            danhMuc = item.id
+                            danhMucHienThi = item.title
+                            expanded = false
+                        }
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -378,7 +402,7 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                 onClick = {
 
                     CoroutineScope(Dispatchers.IO).launch {
-                        AuthService.addTransaction(account_id, transaction_type, soTien, danhMuc, ngayThang, nguonTien, ghiChu).fold(
+                        AuthService.addTransaction(account_id, transaction_type, soTienRaw, danhMuc, ngayThang, nguonTien, ghiChu).fold(
                             onSuccess = { response ->
                                 CoroutineScope(Dispatchers.Main).launch {
                                     if (response.getBoolean("success")) {
@@ -387,10 +411,7 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                                         navController.navigate("home_screen/${account_id}") {
                                             popUpTo("add_transaction_screen") { inclusive = true }
                                         }
-                                    } else {
-                                        //
-                                        }
-
+                                    }
                                 }
                             },
 
@@ -434,26 +455,25 @@ fun requiredLabel(text: String): @Composable () -> Unit = {
 }
 
 @Composable
-fun QuickCategoryButtons(onCategorySelected: (String) -> Unit) {
+fun QuickCategoryButtons(
+    danhMucList: List<Category>,
+    onCategorySelected: (Category) -> Unit
+) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            CategoryButton(R.drawable.ramen, "Ăn uống") { onCategorySelected("1") }
-            CategoryButton(R.drawable.onlineshopping, "Chợ, siêu thị") { onCategorySelected("4") }
-            CategoryButton(R.drawable.bill, "Hóa đơn") { onCategorySelected("3") }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            CategoryButton(R.drawable.multimedia, "Giải trí") { onCategorySelected("2") }
+            // Hiển thị 3 danh mục đầu
+            danhMucList.take(3).forEach { item ->
+                CategoryButton(item.icon, item.title) {
+                    onCategorySelected(item)
+                }
+            }
         }
     }
 }
+
 
 @Composable
 fun CategoryButton(iconId: Int, text: String, onClick: () -> Unit) {

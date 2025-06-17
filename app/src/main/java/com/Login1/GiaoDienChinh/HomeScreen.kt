@@ -1,5 +1,6 @@
 package com.Login1.GiaoDienChinh
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,17 +22,46 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.Login1.GiaoDienLogin.R
+import com.Login1.service.AuthService
+import com.Login1.service.GiaoDich
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.DecimalFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
     val navController = rememberNavController()
-    HomeScreen(navController = navController, account_id = "123")
+    HomeScreen(navController = navController, account_id = "1")
 }
 
 //@Preview
 @Composable
 fun HomeScreen(navController: NavHostController, account_id: String) {
+    var transactions by remember { mutableStateOf<Map<String, List<GiaoDich>>>(emptyMap()) }
+
+    // Load transactions
+    LaunchedEffect(account_id) {
+        CoroutineScope(Dispatchers.IO).launch {
+            AuthService.getTransactions(account_id).fold(
+                onSuccess = { fetchedCategories ->
+                    withContext(Dispatchers.Main) {
+                        transactions = fetchedCategories
+                    }
+                },
+                onFailure = { exception ->
+                    withContext(Dispatchers.Main) {
+                        Log.e("HomeScreen", "Lỗi: ${exception.message}")
+                    }
+                }
+            )
+        }
+    }
+
     Scaffold(
         bottomBar = {
             BottomNavigationBar(navController, account_id)
@@ -44,16 +74,16 @@ fun HomeScreen(navController: NavHostController, account_id: String) {
                 .background(Color(0xFFE0E0E0))
                 .verticalScroll(rememberScrollState())
         ) {
-            HeaderSection()
-            BalanceCard()
-            TopSpendingSection()
-            RecentTransactionsSection()
+            HeaderSection(transactions)
+            BalanceCard(transactions)
+            TopSpendingSection(transactions)
+            RecentTransactionsSection(navController, account_id, transactions)
         }
     }
 }
 
 @Composable
-fun HeaderSection() {
+fun HeaderSection(transactions: Map<String, List<GiaoDich>>) {
 
     Row(
         modifier = Modifier.padding(16.dp),
@@ -61,11 +91,14 @@ fun HeaderSection() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text("0.00 đ", fontSize = 30.sp)
+            val tongSoTien = transactions.values.flatten().sumOf { giaoDich ->
+                if (giaoDich.thuNhap) giaoDich.soTien else -giaoDich.soTien
+            }
+            Text("${DecimalFormat("#,###").format(tongSoTien).replace(",", ".")} đ", fontSize = 30.sp)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Tổng số dư", fontSize = 20.sp)
                 Spacer(modifier = Modifier.width(4.dp))
-                Icon(Icons.Default.Visibility, contentDescription = "Show Balance")
+                //Icon(Icons.Default.Visibility, contentDescription = "Show Balance")
             }
         }
         Row {
@@ -97,7 +130,11 @@ fun BottomNavigationBar(navController: NavHostController, account_id: String) {
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                IconButton(onClick = { /*Home*/}) {
+                IconButton(onClick = {
+                    navController.navigate("home_screen/${account_id}") {
+                        launchSingleTop = true
+                    }
+                }) {
                     Image(
                         painter = painterResource(id = R.drawable.home),
                         contentDescription = "Home",
@@ -132,7 +169,7 @@ fun BottomNavigationBar(navController: NavHostController, account_id: String) {
             IconButton(
                 onClick = {
                     navController.navigate("add_transaction_screen/${account_id}") {
-                        popUpTo("home_screen") { inclusive = true }
+                        launchSingleTop = true
                     }
                 },
                 modifier = Modifier.size(70.dp)
@@ -149,7 +186,11 @@ fun BottomNavigationBar(navController: NavHostController, account_id: String) {
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                IconButton(onClick = { /* Xử lý click Wallet */ }) {
+                IconButton(onClick = {
+                    navController.navigate("budget_screen/${account_id}") {
+                        launchSingleTop = true
+                    }
+                }) {
                     Image(
                         painter = painterResource(id = R.drawable.wallet),
                         contentDescription = "Wallet",
@@ -164,7 +205,11 @@ fun BottomNavigationBar(navController: NavHostController, account_id: String) {
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                IconButton(onClick = { /* Xử lý click User */ }) {
+                IconButton(onClick = {
+                    navController.navigate("personal_screen/${account_id}") {
+                        launchSingleTop = true
+                    }
+                }) {
                     Image(
                         painter = painterResource(id = R.drawable.user),
                         contentDescription = "User",
@@ -179,7 +224,7 @@ fun BottomNavigationBar(navController: NavHostController, account_id: String) {
 
 
 @Composable
-fun BalanceCard() {
+fun BalanceCard(transactions: Map<String, List<GiaoDich>>) {
     Card(
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(12.dp),
@@ -198,20 +243,23 @@ fun BalanceCard() {
             }
             Spacer(modifier = Modifier.height(14.dp))
             HorizontalDivider(thickness = 1.dp, color = Color.Gray)
-            Spacer(modifier = Modifier.height(14.dp))
 
-            WalletItem("Tiền mặt", "0.00đ")
+            Spacer(modifier = Modifier.height(14.dp))
+            val tongTienMat = tinhTongTheoNguonTien(transactions, "Tiền mặt")
+            WalletItem(R.drawable.cash,"Tiền mặt", "${DecimalFormat("#,###").format(tongTienMat).replace(",", ".")} đ")
+
             Spacer(modifier = Modifier.height(15.dp))
-            WalletItem("Ngân hàng", "0.00đ")
+            val tongBank = tinhTongTheoNguonTien(transactions, "Ngân hàng")
+            WalletItem(R.drawable.atm,"Ngân hàng", "${DecimalFormat("#,###").format(tongBank).replace(",", ".")} đ")
         }
     }
 }
 
 @Composable
-fun WalletItem(name: String, amount: String) {
+fun WalletItem(icon: Int, name: String, amount: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Spacer(modifier = Modifier.width(10.dp))
-        Image(painter = painterResource(id = R.drawable.cash), contentDescription = name, modifier = Modifier.size(35.dp))
+        Image(painter = painterResource(id = icon), contentDescription = name, modifier = Modifier.size(35.dp))
         Spacer(modifier = Modifier.width(8.dp))
         Text(name, fontSize = 20.sp)
         Spacer(modifier = Modifier.weight(1f))
@@ -221,7 +269,7 @@ fun WalletItem(name: String, amount: String) {
 }
 
 @Composable
-fun TopSpendingSection() {
+fun TopSpendingSection(transactions: Map<String, List<GiaoDich>>) {
     Column(modifier = Modifier.padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -241,10 +289,11 @@ fun TopSpendingSection() {
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
+            val tyLeChiTieu = tinhTiLeChiTieuTheoDanhMuc(transactions)
             Column(modifier = Modifier.padding(16.dp)) {
-                SpendingItem("🍕 Ăn uống", "70%")
-                SpendingItem("🏠 Thuê nhà", "20%")
-                SpendingItem("🛍️ Mua sắm", "10%")
+                tyLeChiTieu.forEach { (icon, label, percent) ->
+                    SpendingItem(icon = icon, label = label, percentage = percent)
+                }
             }
         }
     }
@@ -253,8 +302,13 @@ fun TopSpendingSection() {
 //Anh thêm data cho cái chi tiêu nhieu nhat o day nha
 
 @Composable
-fun SpendingItem(label: String, percentage: String) {
+fun SpendingItem(icon: Int, label: String, percentage: String) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Image(
+            painter = painterResource(id = icon),
+            contentDescription = label,
+            modifier = Modifier.size(35.dp)
+        )
         Text(label, modifier = Modifier.weight(1f), fontSize = 20.sp)
         Text(percentage, fontSize = 20.sp)
     }
@@ -262,34 +316,115 @@ fun SpendingItem(label: String, percentage: String) {
 }
 
 @Composable
-fun RecentTransactionsSection() {
+fun RecentTransactionsSection(navController: NavHostController, account_id: String, transactionsByDate: Map<String, List<GiaoDich>>) {
+    val giaoDichGanNhat = get3GiaoDichGanNhat(transactionsByDate)
+
     Column(modifier = Modifier.padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically // thêm dòng này
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Giao dịch gần đây", fontWeight = FontWeight.Bold)
-            TextButton(onClick = { /* Xử lý click xem tất cả */ }) {
+            TextButton(onClick = {
+                navController.navigate("transaction_history_screen/${account_id}") {
+                    launchSingleTop = true
+                }
+            }) {
                 Text("Xem chi tiết", color = Color.Green, fontSize = 15.sp)
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Card(
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(170.dp)
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+        if (giaoDichGanNhat.isEmpty()) {
+            Card(
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(170.dp)
             ) {
-                Text("Giao dịch đã thêm sẽ hiển thị ở đây", fontSize = 16.sp)
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Giao dịch đã thêm sẽ hiển thị ở đây", fontSize = 16.sp)
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(12.dp))
+                    .padding(12.dp)
+            ) {
+                giaoDichGanNhat.forEach { giaoDich ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = giaoDich.iconRes),
+                            contentDescription = giaoDich.tenLoai,
+                            modifier = Modifier.size(30.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(giaoDich.tenLoai, fontSize = 16.sp)
+                            Text(giaoDich.ngay, fontSize = 12.sp, color = Color.Gray)
+                        }
+                        Text(
+                            text = "%,d".format(giaoDich.soTien),
+                            color = if (giaoDich.thuNhap) Color(0xFF2196F3) else Color(0xFFF44336),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+
+fun tinhTongTheoNguonTien(
+    transactions: Map<String, List<GiaoDich>>,
+    loaiNguonTien: String // "Tiền mặt" hoặc "Bank"
+): Int {
+    return transactions.values
+        .flatten()
+        .filter { it.nguonTien == loaiNguonTien }
+        .sumOf { if (it.thuNhap) it.soTien else -it.soTien }
+}
+
+fun tinhTiLeChiTieuTheoDanhMuc(transactions: Map<String, List<GiaoDich>>): List<Triple<Int, String, String>> {
+    val allTransactions = transactions.values.flatten()
+
+    // Lọc ra các khoản chi (thuNhap == false)
+    val chiTieuList = allTransactions.filter { !it.thuNhap }
+
+    val tongChiTieu = chiTieuList.sumOf { it.soTien }.takeIf { it != 0 } ?: 1 // tránh chia 0
+
+    return chiTieuList
+        .groupBy { Pair(it.tenLoai, it.iconRes) }
+        .map { (key, list) ->
+            val (tenLoai, iconRes) = key
+            val tongTheoLoai = list.sumOf { it.soTien }
+            val tyLe = tongTheoLoai * 100.0 / tongChiTieu
+            Triple(iconRes, tenLoai, String.format("%.1f%%", tyLe))
+        }
+        .sortedByDescending {
+            it.third.removeSuffix("%").toDouble()
+        } // sắp xếp giảm dần theo tỷ lệ
+}
+
+fun get3GiaoDichGanNhat(transactionsByDate: Map<String, List<GiaoDich>>): List<GiaoDich> {
+    return transactionsByDate
+        .toSortedMap(compareByDescending { LocalDate.parse(it, DateTimeFormatter.ofPattern("dd-MM-yyyy")) })
+        .values
+        .flatten()
+        .sortedByDescending { LocalDate.parse(it.ngay, DateTimeFormatter.ofPattern("dd-MM-yyyy")) }
+        .take(3)
 }

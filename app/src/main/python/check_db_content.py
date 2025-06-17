@@ -17,7 +17,7 @@ def print_db_info():
             print(f"- {table[0]}")
             # In 3 dòng dữ liệu đầu tiên của mỗi bảng
             try:
-                cursor.execute(f"SELECT * FROM {table[0]} LIMIT 3")
+                cursor.execute(f"SELECT * FROM {table[0]}")
                 rows = cursor.fetchall()
                 for row in rows:
                     print(f"  {row}")

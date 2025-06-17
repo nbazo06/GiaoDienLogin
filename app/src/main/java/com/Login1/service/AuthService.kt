@@ -10,12 +10,23 @@ import android.content.Context
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 data class Category(
     val id: String,
     val title: String,
     val type: String,
     val icon: Int
+)
+
+data class GiaoDich(
+    val soTien: Int,
+    val tenLoai: String,
+    val thuNhap: Boolean,
+    val ngay: String,
+    val nguonTien: String,
+    val iconRes: Int
 )
 
 private const val DATABASE_NAME = "login_database.db"
@@ -375,6 +386,41 @@ class AuthService {
                 Log.e("AuthService", "Error: ${e.message}", e)
                 Result.failure(Exception("Không thể lấy dữ liệu categories: ${e.message}"))
             }
+        }
+
+        suspend fun getTransactions(userId: String): Result<Map<String, List<GiaoDich>>> {
+            return try {
+                val response = get("$BASE_URL/transactions?user_id=$userId")
+                if (response.getBoolean("success")) {
+                    val transactions = response.getJSONArray("transactions")
+                    val groupedTransactions = (0 until transactions.length())
+                        .map { i -> transactions.getJSONObject(i) }
+                        .map { it.toGiaoDich() }
+                        .groupBy { it.ngay }
+                    Result.success(groupedTransactions)
+                } else {
+                    Result.failure(Exception(response.getString("message")))
+                }
+            } catch (e: Exception) {
+                Log.e("TransactionHistory", "Error: ${e.message}", e)
+                Result.failure(e)
+            }
+        }
+
+        // Extension function để chuyển đổi JSONObject thành GiaoDich
+        private fun JSONObject.toGiaoDich(): GiaoDich {
+            val rawDate = getString("Transaction_date") // Lấy ngày từ JSON
+            val formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy") // Định dạng ngày tháng khớp với dữ liệu
+            val parsedDate = LocalDate.parse(rawDate, formatter) // Chuyển đổi sang LocalDate
+
+            return GiaoDich(
+                soTien = getInt("Amount"),
+                tenLoai = getString("Category_name"),
+                iconRes = getInt("Category_icon"),
+                ngay = parsedDate.format(formatter),
+                thuNhap = getString("Transaction_type") == "income",
+                nguonTien = getString("Money_source")
+            )
         }
     }
 }
