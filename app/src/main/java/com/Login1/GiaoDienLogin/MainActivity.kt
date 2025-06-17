@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
 //        insertDrawableIconsIntoDatabase(this)
 //    }
             val navController = rememberNavController()
-            BudgetScreen(navController = navController, account_id = "123")
+                BudgetScreen(navController = navController, account_id = "123")
         }
     }
 }
