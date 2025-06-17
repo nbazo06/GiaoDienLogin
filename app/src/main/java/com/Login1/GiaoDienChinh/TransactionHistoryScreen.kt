@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import androidx.compose.ui.text.style.TextAlign
 import android.util.Log
+import androidx.navigation.compose.rememberNavController
 
 
 data class GiaoDich(
@@ -85,6 +86,12 @@ fun TransactionHistoryScreen(navController: NavHostController, userId: String) {
     var transactions by remember { mutableStateOf<Map<String, List<GiaoDich>>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var expandedNguonTien by remember { mutableStateOf(false) }
+
+    val nguonTienList = listOf(
+        NguonTienItem(R.drawable.cash, "Tiền mặt"),
+        NguonTienItem(R.drawable.atm, "Ngân hàng")
+    )
 
     // Load transactions
     LaunchedEffect(userId) {
@@ -108,7 +115,7 @@ fun TransactionHistoryScreen(navController: NavHostController, userId: String) {
     }
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(navController, account_id) }
+        bottomBar = { BottomNavigationBar(navController, userId) }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -127,12 +134,8 @@ fun TransactionHistoryScreen(navController: NavHostController, userId: String) {
                 ) {
                     NguonTienBox(
                         nguonTien = nguonTien,
-                        onClick = { expandedNguonTien = true },
-                        expanded = expandedNguonTien,
-                        onDismissRequest = { expandedNguonTien = false },
-                        onSelect = { item ->
-                            nguonTien = item.ten
-                        }
+                        onNguonTienSelected = { selected -> nguonTien = selected },
+                        nguonTienList = nguonTienList
                     )
                 }
 
@@ -153,76 +156,83 @@ fun TransactionHistoryScreen(navController: NavHostController, userId: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true)
 @Composable
-fun NguonTienDropdown(
-    nguonTien: String,
-    onNguonTienChange: (String) -> Unit
-) {
-    var expandedNguonTien by remember { mutableStateOf(false) }
-
-    val nguonTienList = listOf(
-        NguonTienItem(R.drawable.cash, "Tiền mặt"),
-        NguonTienItem(R.drawable.atm, "Ngân hàng")
-    )
-
-    ExposedDropdownMenuBox(
-        expanded = expandedNguonTien,
-        onExpandedChange = { expandedNguonTien = !expandedNguonTien }
-    ) {
-        OutlinedTextField(
-            readOnly = true,
-            value = nguonTien,
-            onValueChange = {},
-            placeholder = { Text("Tổng cộng", fontSize = 20.sp) },
-            singleLine = true,
-            modifier = Modifier
-                .width(170.dp)
-                .menuAnchor(),
-            trailingIcon = {
-                Icon(
-                    painter = painterResource(id = R.drawable.reorder),
-                    contentDescription = "Dropdown Icon",
-                    modifier = Modifier.size(24.dp)
-                )
-            },
-            shape = RoundedCornerShape(15.dp),
-            textStyle = TextStyle(fontSize = 20.sp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.White,
-                unfocusedBorderColor = Color.White,
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White,
-                disabledContainerColor = Color.White
-            )
-        )
-
-        ExposedDropdownMenu(
-            expanded = expandedNguonTien,
-            onDismissRequest = { expandedNguonTien = false }
-        ) {
-            nguonTienList.forEach { item ->
-                DropdownMenuItem(
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(id = item.icon),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = item.title)
-                        }
-                    },
-                    onClick = {
-                        onNguonTienChange(item.title)
-                        expandedNguonTien = false
-                    }
-                )
-            }
-        }
-    }
+fun TransactionHistoryScreenPreview() {
+    val navController = rememberNavController()
+    TransactionHistoryScreen(navController = navController, userId = "123")
 }
+
+//@OptIn(ExperimentalMaterial3Api::class)
+//@Composable
+//fun NguonTienDropdown(
+//    nguonTien: String,
+//    onNguonTienChange: (String) -> Unit
+//) {
+//    var expandedNguonTien by remember { mutableStateOf(false) }
+//
+//    val nguonTienList = listOf(
+//        NguonTienItem(R.drawable.cash, "Tiền mặt"),
+//        NguonTienItem(R.drawable.atm, "Ngân hàng")
+//    )
+//
+//    ExposedDropdownMenuBox(
+//        expanded = expandedNguonTien,
+//        onExpandedChange = { expandedNguonTien = !expandedNguonTien }
+//    ) {
+//        OutlinedTextField(
+//            readOnly = true,
+//            value = nguonTien,
+//            onValueChange = {},
+//            placeholder = { Text("Tổng cộng", fontSize = 20.sp) },
+//            singleLine = true,
+//            modifier = Modifier
+//                .width(170.dp)
+//                .menuAnchor(),
+//            trailingIcon = {
+//                Icon(
+//                    painter = painterResource(id = R.drawable.reorder),
+//                    contentDescription = "Dropdown Icon",
+//                    modifier = Modifier.size(24.dp)
+//                )
+//            },
+//            shape = RoundedCornerShape(15.dp),
+//            textStyle = TextStyle(fontSize = 20.sp),
+//            colors = OutlinedTextFieldDefaults.colors(
+//                focusedBorderColor = Color.White,
+//                unfocusedBorderColor = Color.White,
+//                focusedContainerColor = Color.White,
+//                unfocusedContainerColor = Color.White,
+//                disabledContainerColor = Color.White
+//            )
+//        )
+//
+//        ExposedDropdownMenu(
+//            expanded = expandedNguonTien,
+//            onDismissRequest = { expandedNguonTien = false }
+//        ) {
+//            nguonTienList.forEach { item ->
+//                DropdownMenuItem(
+//                    text = {
+//                        Row(verticalAlignment = Alignment.CenterVertically) {
+//                            Image(
+//                                painter = painterResource(id = item.iconResid),
+//                                contentDescription = null,
+//                                modifier = Modifier.size(24.dp)
+//                            )
+//                            Spacer(modifier = Modifier.width(8.dp))
+//                            Text(text = item.ten)
+//                        }
+//                    },
+//                    onClick = {
+//                        onNguonTienChange(item.ten)
+//                        expandedNguonTien = false
+//                    }
+//                )
+//            }
+//        }
+//    }
+//}
 
 @Composable
 fun TopBarIcons() {

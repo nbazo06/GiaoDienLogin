@@ -19,9 +19,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Login1.GiaoDienLogin.R
 import android.app.DatePickerDialog
+import android.util.Log
 import android.widget.DatePicker
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import java.util.*
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -33,7 +35,12 @@ import kotlinx.coroutines.delay
 import com.Login1.service.Category
 import kotlinx.coroutines.withContext
 
-data class NguonTienItem(val icon: Int, val title: String)
+@Preview(showBackground = true)
+@Composable
+fun AddTransactionScreenPreview() {
+    val navController = rememberNavController()
+    AddTransactionScreen(navController = navController, account_id = "123")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

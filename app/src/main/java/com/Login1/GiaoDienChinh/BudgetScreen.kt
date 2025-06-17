@@ -20,10 +20,12 @@ import java.time.LocalDate
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.TextStyle
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
@@ -231,6 +233,67 @@ fun BudgetCard(
     }
 }
 
+@Composable
+fun NguonTienBox(
+    nguonTien: String,
+    onNguonTienSelected: (String) -> Unit,
+    nguonTienList: List<NguonTienItem>
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .wrapContentSize()
+            .padding(12.dp)
+            .clickable { expanded = true }
+            .background(Color.White, shape = RoundedCornerShape(20.dp))
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = nguonTien.ifBlank { "Tổng cộng" },
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black
+            )
+            Icon(
+                painter = painterResource(id = R.drawable.reorder), // icon tùy bạn
+                contentDescription = null,
+                modifier = Modifier
+                    .size(16.dp)
+                    .padding(start = 6.dp),
+                tint = Color.Gray
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            nguonTienList.forEach { item ->
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = painterResource(id = item.iconResid),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = item.ten)
+                        }
+                    },
+                    onClick = {
+                        onNguonTienSelected(item.ten)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+
 fun String.toLocalDate(pattern: String = "dd/MM/yyyy"): LocalDate {
     val formatter = DateTimeFormatter.ofPattern(pattern)
     return LocalDate.parse(this, formatter)
@@ -241,12 +304,18 @@ fun String.toLocalDate(pattern: String = "dd/MM/yyyy"): LocalDate {
 
 @Composable
 fun BudgetScreen(navController: NavHostController, account_id: String) {
-    val tabOptions = listOf("Tháng này", "Tuần này")
+
     var selectedTabIndex by remember { mutableStateOf(0) }
     var nguonTien by remember { mutableStateOf("Tổng cộng") }
-    var expandedNguonTien by remember { mutableStateOf(false) }
+
+    //Biến lấy các khoảng thời gian của các ngân sách
+    val tabOptions = listOf("")
 
     var budgetItems by remember { mutableStateOf<List<BudgetItem>>(emptyList()) }
+    val nguonTienList = listOf(
+        NguonTienItem(R.drawable.cash, "Tiền mặt"),
+        NguonTienItem(R.drawable.atm, "Ngân hàng")
+    )
 
     // Gọi API khi vào màn
     LaunchedEffect(Unit) {
@@ -307,13 +376,12 @@ fun BudgetScreen(navController: NavHostController, account_id: String) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         NguonTienBox(
                             nguonTien = nguonTien,
-                            onClick = { expandedNguonTien = true },
-                            expanded = expandedNguonTien,
-                            onDismissRequest = { expandedNguonTien = false },
-                            onSelect = { item -> nguonTien = item.ten }
+                            onNguonTienSelected = { selected -> nguonTien = selected },
+                            nguonTienList = nguonTienList
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
+
                         BudgetTabSelector(
                             tabs = tabOptions,
                             selectedIndex = selectedTabIndex,
