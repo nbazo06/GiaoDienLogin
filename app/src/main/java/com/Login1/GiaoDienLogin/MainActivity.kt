@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
+import com.Login1.GiaoDienChinh.AddBudgetScreen
 import com.Login1.GiaoDienChinh.AddTransactionScreen
 import com.Login1.GiaoDienChinh.BudgetScreen
 import com.Login1.navigation.SetupNavGraph
@@ -23,21 +24,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            GiaoDienLoginTheme {
-                val navController = rememberNavController()
-                Scaffold(modifier = Modifier.fillMaxSize()) {
-                    SetupNavGraph(navController = navController)
-                }
-            }
-//            val navController = rememberNavController()
-////            TransactionHistoryScreen(navController = navController, account_id = "123")
-////            AddTransactionScreen()
-//
-//            BudgetScreen(navController = navController, account_id = "123")
+//            GiaoDienLoginTheme {
+//                val navController = rememberNavController()
+//                Scaffold(modifier = Modifier.fillMaxSize()) {
+//                    SetupNavGraph(navController = navController)
+//                }
+//            }
+////            val navController = rememberNavController()
+//////            TransactionHistoryScreen(navController = navController, account_id = "123")
+//////            AddTransactionScreen()
+////
+////            BudgetScreen(navController = navController, account_id = "123")
+//        }
+//        insertDrawableIconsIntoDatabase(this)
+//    }
+            val navController = rememberNavController()
+            BudgetScreen(navController = navController, account_id = "123")
         }
-        insertDrawableIconsIntoDatabase(this)
     }
-
 }
 
 

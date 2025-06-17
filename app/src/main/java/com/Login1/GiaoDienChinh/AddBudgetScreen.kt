@@ -34,6 +34,16 @@
     import androidx.compose.material3.ExperimentalMaterial3Api
     import androidx.navigation.compose.rememberNavController
 
+    data class DanhMucItem(
+        val icon: Int,
+        val title: String
+    )
+
+    data class NguonTienItem(
+        val iconResid: Int,
+        val ten: String
+    )
+
     @Preview(showBackground = true)
     @Composable
     fun AddBudgetScreenPreview() {
