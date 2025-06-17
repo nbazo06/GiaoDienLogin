@@ -10,15 +10,13 @@
     import androidx.compose.ui.Modifier
     import androidx.compose.ui.graphics.Color
     import androidx.compose.ui.res.painterResource
-    import androidx.compose.ui.text.SpanStyle
     import androidx.compose.ui.text.TextStyle
-    import androidx.compose.ui.text.buildAnnotatedString
     import androidx.compose.ui.text.font.FontWeight
-    import androidx.compose.ui.text.withStyle
     import androidx.compose.ui.unit.dp
     import androidx.compose.ui.unit.sp
     import com.Login1.GiaoDienLogin.R
     import android.app.DatePickerDialog
+    import android.util.Log
     import android.widget.DatePicker
     import androidx.compose.foundation.clickable
     import androidx.compose.ui.platform.LocalContext
@@ -32,12 +30,12 @@
     import kotlinx.coroutines.launch
     import kotlinx.coroutines.delay
     import androidx.compose.material3.ExperimentalMaterial3Api
+    import androidx.compose.ui.text.TextRange
+    import androidx.compose.ui.text.input.TextFieldValue
     import androidx.navigation.compose.rememberNavController
-
-    data class DanhMucItem(
-        val icon: Int,
-        val title: String
-    )
+    import com.Login1.service.Category
+    import kotlinx.coroutines.withContext
+    import java.text.DecimalFormat
 
     data class NguonTienItem(
         val iconResid: Int,
@@ -56,21 +54,35 @@
     fun AddBudgetScreen(navController: NavHostController, account_id: String) {
         var selectedTab by remember { mutableStateOf("Chi tiêu") }
         var transaction_type by remember { mutableStateOf("") }
-        var soTien by remember { mutableStateOf("") }
+        var soTienRaw by remember { mutableStateOf("") }
         var danhMuc by remember { mutableStateOf("") }
         var nguonTien by remember { mutableStateOf("") }
         var ghiChu by remember { mutableStateOf("") }
+
+        var soTienText by remember { mutableStateOf(TextFieldValue(text = "", selection = TextRange(0))) }
+        var danhMucHienThi by remember { mutableStateOf("") }
         var expanded by remember { mutableStateOf(false) }
         var expandedNguonTien by remember { mutableStateOf(false) }
 
-        val danhMucList = listOf(
-            DanhMucItem(R.drawable.ramen, "Ăn uống"),
-            DanhMucItem(R.drawable.multimedia, "Giải trí"),
-            DanhMucItem(R.drawable.bill, "Hóa đơn"),
-            DanhMucItem(R.drawable.onlineshopping, "Chợ, siêu thị"),
-            DanhMucItem(R.drawable.motorcycle, "Di chuyển"),
-            DanhMucItem(R.drawable.ellipsis, "Khác")
-        )
+        // Lấy danh mục từ backend
+        var danhMucList by remember { mutableStateOf<List<Category>>(emptyList()) }
+        LaunchedEffect(account_id) {
+            CoroutineScope(Dispatchers.IO).launch {
+                AuthService.getCategories(account_id).fold(
+                    onSuccess = { fetchedCategories ->
+                        withContext(Dispatchers.Main) {
+                            danhMucList = fetchedCategories
+                            Log.d("AddTransactionScreen", "Danh mục: $danhMucList")
+                        }
+                    },
+                    onFailure = { exception ->
+                        withContext(Dispatchers.Main) {
+                            Log.e("AddTransactionScreen", "Lỗi: ${exception.message}")
+                        }
+                    }
+                )
+            }
+        }
 
         val nguonTienList = listOf(
             NguonTienItem(R.drawable.cash, "Tiền mặt"),
@@ -230,8 +242,20 @@
 
                         // Nhập số tiền
                         OutlinedTextField(
-                            value = soTien,
-                            onValueChange = { soTien = it },
+                            value = soTienText,
+                            onValueChange = { input ->
+                                val digitsOnly = input.text.filter { it.isDigit() }
+
+                                soTienRaw = digitsOnly
+
+                                val formatted = DecimalFormat("#,###").format(digitsOnly).replace(",", ".")
+
+                                // Cập nhật TextFieldValue và đặt dấu nháy về cuối
+                                soTienText = TextFieldValue(
+                                    text = formatted,
+                                    selection = TextRange(formatted.length)
+                                )
+                            },
                             label = requiredLabel("Số tiền"),
                             placeholder = { Text("Nhập số tiền...", fontSize = 20.sp) },
                             singleLine = true,
@@ -253,7 +277,7 @@
                         ) {
                             OutlinedTextField(
                                 readOnly = true,
-                                value = danhMuc,
+                                value = danhMucHienThi,
                                 onValueChange = {},
                                 label = requiredLabel("Danh mục"),
                                 placeholder = { Text("Chọn danh mục...", fontSize = 20.sp) },
@@ -290,7 +314,8 @@
                                             }
                                         },
                                         onClick = {
-                                            danhMuc = item.title
+                                            danhMuc = item.id
+                                            danhMucHienThi = item.title
                                             expanded = false
                                         }
                                     )
@@ -300,11 +325,14 @@
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Nút nhanh chọn danh mục
-                        QuickCategoryButtons(onCategorySelected = { selectedCategory ->
-                            danhMuc = selectedCategory
-                            expanded = false
-                        })
+                        QuickCategoryButtons(
+                            danhMucList = danhMucList,
+                            onCategorySelected = { item ->
+                                danhMuc = item.id
+                                danhMucHienThi = item.title
+                                expanded = false
+                            }
+                        )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -423,7 +451,7 @@
                                     AuthService.addTransaction(
                                         account_id,
                                         transaction_type,
-                                        soTien,
+                                        soTienRaw,
                                         danhMuc,
                                         ngayBatDau,
                                         nguonTien,
@@ -432,12 +460,10 @@
                                         onSuccess = { response ->
                                             CoroutineScope(Dispatchers.Main).launch {
                                                 if (response.getBoolean("success")) {
-                                                    successMessage = "Thêm giao dịch thành công"
+                                                    successMessage = "Thêm ngân sách thành công"
                                                     delay(500)
                                                     navController.navigate("home_screen/${account_id}") {
-                                                        popUpTo("add_transaction_screen") {
-                                                            inclusive = true
-                                                        }
+                                                        popUpTo("add_budget_screen") { inclusive = true }
                                                     }
                                                 } else {
                                                     errorMessage = response.getString("message")

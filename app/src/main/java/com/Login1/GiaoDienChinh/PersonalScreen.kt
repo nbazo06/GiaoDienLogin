@@ -27,7 +27,7 @@ import androidx.navigation.compose.rememberNavController
 @Composable
 fun PersonalScreenPreview() {
     val navController = rememberNavController()
-    personalScreen(navController = navController, userId = "123")
+    PersonalScreen(navController = navController, userId = "123")
 }
 
 data class User(
@@ -166,7 +166,7 @@ fun PersonalCard(user: User) {
 }
 
 @Composable
-fun personalScreen(navController: NavHostController, userId: String) {
+fun PersonalScreen(navController: NavHostController, userId: String) {
     val currentUser = User(
         fullName = "Nguyễn Đỗ Gia Bảo",
         phoneNumber = "0911874264"

@@ -171,9 +171,9 @@ fun LoginScreen(navController: NavHostController) {
 
             Text(
                 text = "Quên mật khẩu?",
-                modifier = Modifier.clickable { 
+                modifier = Modifier.clickable {
                     navController.navigate("forgot_password_screen") {
-                        popUpTo("login_screen") { inclusive = true }
+                        launchSingleTop = true
                     }
                 },
                 color = Color.Black,

@@ -344,7 +344,9 @@ fun BudgetScreen(navController: NavHostController, account_id: String) {
             floatingActionButton = {
                 Button(
                     onClick = {
-                        navController.navigate("add_budget_screen/${account_id}")
+                        navController.navigate("add_budget_screen/${account_id}") {
+                            launchSingleTop = true
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()

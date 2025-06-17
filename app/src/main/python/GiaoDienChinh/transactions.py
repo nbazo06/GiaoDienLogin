@@ -57,6 +57,7 @@ def get_transactions():
                 t.Transaction_date,
                 t.Amount,
                 t.Transaction_type,
+                t.Money_source,
                 c.Category_name,
                 c.Category_icon
             FROM Transactions t

@@ -35,7 +35,7 @@ pip install -r requirements.txt
 cd app/src/main/python
 
 # Chạy Flask server
-python app.py
+python main.py
 ```
 
 Server sẽ chạy tại địa chỉ `http://localhost:5000`

@@ -11,7 +11,9 @@ import com.Login1.GiaoDienLogin.EmailConfirmation
 import com.Login1.GiaoDienLogin.NewPasswordScreen
 import com.Login1.GiaoDienChinh.HomeScreen
 import com.Login1.GiaoDienChinh.AddTransactionScreen
+import com.Login1.GiaoDienChinh.BudgetScreen
 import com.Login1.GiaoDienChinh.TransactionHistoryScreen
+import com.Login1.GiaoDienChinh.PersonalScreen
 
 @Composable
 fun SetupNavGraph(
@@ -50,7 +52,18 @@ fun SetupNavGraph(
         composable(route = "transaction_history_screen/{account_id}") { backStackEntry ->
             val account_id = backStackEntry.arguments?.getString("account_id") ?: ""
             TransactionHistoryScreen(navController = navController, account_id)
-
+        }
+        composable(route = "budget_screen/{account_id}") { backStackEntry ->
+            val account_id = backStackEntry.arguments?.getString("account_id") ?: ""
+            BudgetScreen(navController = navController, account_id)
+        }
+        composable(route = "add_budget_screen/{account_id}") { backStackEntry ->
+            val account_id = backStackEntry.arguments?.getString("account_id") ?: ""
+            BudgetScreen(navController = navController, account_id)
+        }
+        composable(route = "personal_screen/{account_id}") { backStackEntry ->
+            val account_id = backStackEntry.arguments?.getString("account_id") ?: ""
+            PersonalScreen(navController = navController, account_id)
         }
     }
 } 
