@@ -32,6 +32,7 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import com.Login1.service.GiaoDich
+import kotlin.math.abs
 
 //@Preview
 @Composable
@@ -287,7 +288,7 @@ fun LichSuGiaoDichScreen(transactionsByDate: Map<String, List<GiaoDich>>) {
             val thangNam = "tháng ${ngayLocalDate.monthValue} ${ngayLocalDate.year}"
 
             val isPositive = soDu >= 0
-            val soDuText = if (isPositive) "+%,d".format(soDu) else "-%,d".format(kotlin.math.abs(soDu))
+            val soDuText = if (isPositive) "+%,d".format(soDu) else "-%,d".format(abs(soDu))
             val soDuColor = if (isPositive) Color(0xFF4CAF50) else Color(0xFFF44336)
 
             // Container cho từng ngày
@@ -400,6 +401,54 @@ fun MonthFilterButtons(
                     )
                 } else {
                     Spacer(modifier = Modifier.height(2.dp))
+                }
+            }
+        }
+    }
+}
+
+//Ham hộp thoại confirm xóa hay không, bienluutru em để ở trên nhe
+@Composable
+fun DeleteConfirmationDialog(
+    onDismiss: () -> Unit,
+    onConfirmDelete: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.LightGray)
+            .clickable(enabled = false) {}, // Ngăn click bên ngoài
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .width(300.dp)
+                .wrapContentHeight(),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Bạn có chắc chắn muốn xóa?",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                HorizontalDivider(thickness = 1.dp, color = Color.Gray)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Hủy", color = Color.Gray, fontSize = 16.sp)
+                    }
+                    TextButton(onClick = onConfirmDelete) {
+                        Text("Xóa", color = Color.Red, fontSize = 16.sp)
+                    }
                 }
             }
         }
