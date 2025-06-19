@@ -26,16 +26,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            GiaoDienLoginTheme {
-                val navController = rememberNavController()
-                Scaffold(modifier = Modifier.fillMaxSize()) {
-                    SetupNavGraph(navController = navController)
-                }
-            }/*
+//            GiaoDienLoginTheme {
+//                val navController = rememberNavController()
+//                Scaffold(modifier = Modifier.fillMaxSize()) {
+//                    SetupNavGraph(navController = navController)
+//                }
+//            }/*
             val navController = rememberNavController()
             TransactionHistoryScreen(navController = navController, account_id = "123")
-            AddTransactionScreen()
-            BudgetScreen(navController = navController, account_id = "123")*/
         }
     }
     /*override fun onCreate(savedInstanceState: Bundle?) {
