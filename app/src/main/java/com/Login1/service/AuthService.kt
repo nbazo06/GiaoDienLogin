@@ -479,50 +479,52 @@ class AuthService {
                 nguonTien = getString("WalletID")
             )
         }
-        suspend fun updateTransaction(
-            transactionId: String,
-            amount: String,
-            transaction_type: String,
-            CategoryID: String,
-            transaction_date: String,
-            money_source: String,
-            note: String,
-        ): Result<JSONObject> {
-            var connection: HttpURLConnection? = null
-            return try {
-                val url = URL("$BASE_URL/transactions/$transactionId")
-                connection = url.openConnection() as HttpURLConnection
-                connection.apply {
-                    requestMethod = "PUT"
-                    setRequestProperty("Content-Type", "application/json")
-                    doOutput = true
-                    connectTimeout = 5000
-                    readTimeout = 5000
-                }
 
-                val jsonInputString = JSONObject().apply {
-                    put("Amount", amount)
-                    put("Transaction_type", transaction_type)
-                    put("CategoryID", CategoryID)
-                    put("Transaction_date", transaction_date)
-                    put("WalletID", money_source)
-                    put("Note", note)
-                }.toString()
+        // suspend fun updateTransaction(
+        //     transactionId: String,
+        //     amount: String,
+        //     transaction_type: String,
+        //     CategoryID: String,
+        //     transaction_date: String,
+        //     money_source: String,
+        //     note: String,
+        // ): Result<JSONObject> {
+        //     var connection: HttpURLConnection? = null
+        //     return try {
+        //         val url = URL("$BASE_URL/transactions/$transactionId")
+        //         connection = url.openConnection() as HttpURLConnection
+        //         connection.apply {
+        //             requestMethod = "PUT"
+        //             setRequestProperty("Content-Type", "application/json")
+        //             doOutput = true
+        //             connectTimeout = 5000
+        //             readTimeout = 5000
+        //         }
 
-                OutputStreamWriter(connection.outputStream).use { it.write(jsonInputString) }
+        //         val jsonInputString = JSONObject().apply {
+        //             put("Amount", amount)
+        //             put("Transaction_type", transaction_type)
+        //             put("CategoryID", CategoryID)
+        //             put("Transaction_date", transaction_date)
+        //             put("WalletID", money_source)
+        //             put("Note", note)
+        //         }.toString()
 
-                val response = readResponse(connection)
-                if (connection.responseCode in 200..299) {
-                    Result.success(response)
-                } else {
-                    Result.failure(Exception(response.getString("message")))
-                }
-            } catch (e: Exception) {
-                Result.failure(Exception("Không thể kết nối đến server"))
-            } finally {
-                connection?.disconnect()
-            }
-        }
+        //         OutputStreamWriter(connection.outputStream).use { it.write(jsonInputString) }
+
+        //         val response = readResponse(connection)
+        //         if (connection.responseCode in 200..299) {
+        //             Result.success(response)
+        //         } else {
+        //             Result.failure(Exception(response.getString("message")))
+        //         }
+        //     } catch (e: Exception) {
+        //         Result.failure(Exception("Không thể kết nối đến server"))
+        //     } finally {
+        //         connection?.disconnect()
+        //     }
+        // }
+        
         suspend fun deleteTransaction(transactionId: String): Result<JSONObject> {
             var connection: HttpURLConnection? = null
             return try {

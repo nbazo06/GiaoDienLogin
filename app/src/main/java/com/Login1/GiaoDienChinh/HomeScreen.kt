@@ -37,19 +37,19 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun HomeScreenPreview() {
     val navController = rememberNavController()
-    HomeScreen(navController = navController, account_id = "1")
+    HomeScreen(navController = navController, user_id = "1")
 }
 
 //@Preview
 @Composable
-fun HomeScreen(navController: NavHostController, account_id: String) {
+fun HomeScreen(navController: NavHostController, user_id: String) {
     var transactions by remember { mutableStateOf<Map<String, List<GiaoDich>>>(emptyMap()) }
     var wallets by remember { mutableStateOf<List<Wallet>>(emptyList()) }
 
     // Load transactions
-    LaunchedEffect(account_id) {
+    LaunchedEffect(user_id) {
         CoroutineScope(Dispatchers.IO).launch {
-            AuthService.getWallets(account_id).fold(
+            AuthService.getWallets(user_id).fold(
                 onSuccess = { fetchedWallets ->
                     withContext(Dispatchers.Main) {
                         wallets = fetchedWallets
@@ -61,7 +61,7 @@ fun HomeScreen(navController: NavHostController, account_id: String) {
                     }
                 }
             )
-            AuthService.getTransactions(account_id).fold(
+            AuthService.getTransactions(user_id).fold(
                 onSuccess = { fetchedTransactions ->
                     withContext(Dispatchers.Main) {
                         transactions = fetchedTransactions
@@ -78,7 +78,7 @@ fun HomeScreen(navController: NavHostController, account_id: String) {
 
     Scaffold(
         bottomBar = {
-            BottomNavigationBar(navController, account_id)
+            BottomNavigationBar(navController, user_id)
         }
     ) { paddingValues ->
         Column(
@@ -91,7 +91,7 @@ fun HomeScreen(navController: NavHostController, account_id: String) {
             HeaderSection(transactions)
             BalanceCard(transactions, wallets)
             TopSpendingSection(transactions)
-            RecentTransactionsSection(navController, account_id, transactions)
+            RecentTransactionsSection(navController, user_id, transactions)
         }
     }
 }
@@ -128,7 +128,7 @@ fun HeaderSection(transactions: Map<String, List<GiaoDich>>) {
 }
 
 @Composable
-fun BottomNavigationBar(navController: NavHostController, account_id: String) {
+fun BottomNavigationBar(navController: NavHostController, user_id: String) {
     Column {
         HorizontalDivider(color = Color.Black, thickness = 1.dp)
         Row(
@@ -145,7 +145,7 @@ fun BottomNavigationBar(navController: NavHostController, account_id: String) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 IconButton(onClick = {
-                    navController.navigate("home_screen/${account_id}") {
+                    navController.navigate("home_screen/${user_id}") {
                         launchSingleTop = true
                     }
                 }) {
@@ -165,7 +165,7 @@ fun BottomNavigationBar(navController: NavHostController, account_id: String) {
             ) {
                 IconButton(
                     onClick = {
-                        navController.navigate("transaction_history_screen/${account_id}") {
+                        navController.navigate("transaction_history_screen/${user_id}") {
                             launchSingleTop = true
                         }
                     }
@@ -182,7 +182,7 @@ fun BottomNavigationBar(navController: NavHostController, account_id: String) {
             // Nút Add lớn hơn, không có label
             IconButton(
                 onClick = {
-                    navController.navigate("add_transaction_screen/${account_id}") {
+                    navController.navigate("add_transaction_screen/${user_id}") {
                         launchSingleTop = true
                     }
                 },
@@ -201,7 +201,7 @@ fun BottomNavigationBar(navController: NavHostController, account_id: String) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 IconButton(onClick = {
-                    navController.navigate("budget_screen/${account_id}") {
+                    navController.navigate("budget_screen/${user_id}") {
                         launchSingleTop = true
                     }
                 }) {
@@ -220,7 +220,7 @@ fun BottomNavigationBar(navController: NavHostController, account_id: String) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 IconButton(onClick = {
-                    navController.navigate("personal_screen/${account_id}") {
+                    navController.navigate("personal_screen/${user_id}") {
                         launchSingleTop = true
                     }
                 }) {
@@ -329,7 +329,7 @@ fun SpendingItem(icon: Int, label: String, percentage: String) {
 }
 
 @Composable
-fun RecentTransactionsSection(navController: NavHostController, account_id: String, transactionsByDate: Map<String, List<GiaoDich>>) {
+fun RecentTransactionsSection(navController: NavHostController, user_id: String, transactionsByDate: Map<String, List<GiaoDich>>) {
     val giaoDichGanNhat = get3GiaoDichGanNhat(transactionsByDate)
 
     Column(modifier = Modifier.padding(16.dp)) {
@@ -340,7 +340,7 @@ fun RecentTransactionsSection(navController: NavHostController, account_id: Stri
         ) {
             Text("Giao dịch gần đây", fontWeight = FontWeight.Bold)
             TextButton(onClick = {
-                navController.navigate("transaction_history_screen/${account_id}") {
+                navController.navigate("transaction_history_screen/${user_id}") {
                     launchSingleTop = true
                 }
             }) {
