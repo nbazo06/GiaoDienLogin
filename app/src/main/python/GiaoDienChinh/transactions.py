@@ -54,6 +54,7 @@ def get_transactions():
         # Sử dụng JOIN để lấy thêm Category_name và Category_icon từ bảng Category
         cursor.execute('''
             SELECT 
+                t.TransactionID,
                 t.Transaction_date,
                 t.Amount,
                 t.Transaction_type,
@@ -74,7 +75,7 @@ def get_transactions():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # Xem chi tiết transaction
-@transactions_bp.route('/api/transactions/<int:transaction_id>', methods=['GET'])
+@transactions_bp.route('/transactions/<int:transaction_id>', methods=['GET'])
 def get_transaction_detail(transaction_id):
     try:
         conn = get_db_connection()
@@ -89,7 +90,7 @@ def get_transaction_detail(transaction_id):
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@transactions_bp.route('/api/transactions/<transaction_id>', methods=['PUT'])
+@transactions_bp.route('/transactions/<transaction_id>', methods=['PUT'])
 def update_transaction(transaction_id):
     data = request.get_json()
 
@@ -138,7 +139,7 @@ def update_transaction(transaction_id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # Xóa transaction
-@transactions_bp.route('/api/transactions/<int:transaction_id>', methods=['DELETE'])
+@transactions_bp.route('/transactions/<int:transaction_id>', methods=['DELETE'])
 def delete_transaction(transaction_id):
     try:
         conn = get_db_connection()

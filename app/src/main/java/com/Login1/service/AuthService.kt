@@ -27,6 +27,7 @@ data class Wallet(
 )
 
 data class GiaoDich(
+    val id: String,
     val soTien: Int,
     val tenLoai: String,
     val thuNhap: Boolean,
@@ -469,6 +470,7 @@ class AuthService {
             val parsedDate = LocalDate.parse(rawDate, formatter) // Chuyển đổi sang LocalDate
 
             return GiaoDich(
+                id = getString("TransactionID"),
                 soTien = getInt("Amount"),
                 tenLoai = getString("Category_name"),
                 iconRes = getInt("Category_icon"),
@@ -517,6 +519,28 @@ class AuthService {
                 }
             } catch (e: Exception) {
                 Result.failure(Exception("Không thể kết nối đến server"))
+            } finally {
+                connection?.disconnect()
+            }
+        }
+        suspend fun deleteTransaction(transactionId: String): Result<JSONObject> {
+            var connection: HttpURLConnection? = null
+            return try {
+                val url = URL("$BASE_URL/transactions/$transactionId")
+                connection = url.openConnection() as HttpURLConnection
+                connection.apply {
+                    requestMethod = "DELETE"
+                    connectTimeout = 5000
+                    readTimeout = 5000
+                }
+                val response = readResponse(connection)
+                if (connection.responseCode in 200..299) {
+                    Result.success(response)
+                } else {
+                    Result.failure(Exception(response.optString("message", "Xóa giao dịch thất bại")))
+                }
+            } catch (e: Exception) {
+                Result.failure(Exception("Không thể kết nối đến server: ${e.message}"))
             } finally {
                 connection?.disconnect()
             }

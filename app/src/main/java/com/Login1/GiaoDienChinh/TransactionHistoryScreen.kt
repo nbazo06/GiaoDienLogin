@@ -21,27 +21,19 @@ import androidx.compose.ui.unit.sp
 import com.Login1.GiaoDienLogin.R
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import com.Login1.GiaoDienLogin.R
 import com.Login1.service.AuthService
 import com.Login1.service.GiaoDich
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import com.Login1.service.GiaoDich
 import com.Login1.service.Wallet
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
 
@@ -235,6 +227,10 @@ fun LichSuGiaoDichScreen(
     transactionsByDate: Map<String, List<GiaoDich>>,
     wallets: List<Wallet>
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var transactionToDelete by remember { mutableStateOf<GiaoDich?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -294,16 +290,13 @@ fun LichSuGiaoDichScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 transactions.forEach { giaoDich ->
-                    val walletName = wallets.find { it.id == giaoDich.nguonTien }?.name ?: "Không rõ"
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    val walletName =
+                        wallets.find { it.id == giaoDich.nguonTien }?.name ?: "Không rõ"
                     SwipeableTransactionItem(
                         giaoDich = giaoDich,
                         onSwipeDelete = {
-                            // TODO: xử lý xóa
+                            transactionToDelete = giaoDich
+                            showDeleteDialog = true
                         },
                         onSwipeEdit = {
                             // TODO: chuyển sang màn sửa hoặc hiển thị dialog
@@ -326,19 +319,41 @@ fun LichSuGiaoDichScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
-                                text = "%,d".format(giaoDich.soTien),
+                                text = "% ,d".format(giaoDich.soTien),
                                 color = if (giaoDich.thuNhap) Color(0xFF2196F3) else Color(0xFFF44336),
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
             }
             Spacer(modifier = Modifier.height(12.dp))
         }
     }
+
+    if (showDeleteDialog && transactionToDelete != null) {
+        DeleteConfirmationDialog(
+            onDismiss = { showDeleteDialog = false },
+            onConfirmDelete = {
+                showDeleteDialog = false
+                transactionToDelete?.let { giaoDich ->
+                    // Gọi API xóa transaction
+                    coroutineScope.launch {
+                        try {
+                            val transactionId = giaoDich.id
+                            val result = AuthService.deleteTransaction(transactionId)
+                            // Sau khi xóa thành công, bạn nên reload lại danh sách giao dịch
+                            // ... gọi lại API lấy transactions ...
+                        } catch (e: Exception) {
+                            // Xử lý lỗi nếu cần
+                        }
+                    }
+                }
+            }
+        )
+    }
+}
 
 @Composable
 fun MonthFilterButtons(selected: String, onSelectedChange: (String) -> Unit) {
@@ -375,44 +390,6 @@ fun MonthFilterButtons(selected: String, onSelectedChange: (String) -> Unit) {
                 }
             }
         }
-    }
-}
-
-@Composable
-fun TopBarIcons() {
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd) {
-        Row(modifier = Modifier.padding(top = 12.dp)) {
-            IconButton(onClick = { }) {
-                Image(
-                    painter = painterResource(id = R.drawable.search),
-                    contentDescription = "Search",
-                    modifier = Modifier.size(30.dp)
-                )
-            }
-            IconButton(onClick = { }) {
-                Image(
-                    painter = painterResource(id = R.drawable.ellipsis),
-                    contentDescription = "More",
-                    modifier = Modifier.size(30.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun FilterButtonsRow() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 75.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {}
     }
 }
 
@@ -458,13 +435,6 @@ fun DeleteConfirmationDialog(onDismiss: () -> Unit, onConfirmDelete: () -> Unit)
             }
         }
     }
-}
-
-@Preview
-@Composable
-fun TransactionHistoryScreenPreview() {
-    val navController = rememberNavController()
-    TransactionHistoryScreen(navController = navController, account_id = "123")
 }
 
 @Composable
