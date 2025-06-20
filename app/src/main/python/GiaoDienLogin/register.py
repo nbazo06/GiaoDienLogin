@@ -70,7 +70,12 @@ def register():
             ('Hóa đơn', 'expense', '2130968584'),
             ('Chợ, siêu thị', 'expense', '2130968612'),
             ('Di chuyển', 'expense', '2130968597'),
-            
+            ('Sức khỏe', 'expense', '2130968600'),
+            ('Giáo dục', 'expense', '2130968601'),
+            ('Tiết kiệm', 'income', '2130968596'),
+            ('Mua sắm', 'expense', '2130968599'),
+            ('Lương', 'income', '2130968602'),
+            ('Trợ cấp', 'income', '2130968603'),
             ('Khác', 'expense', '2130968586')
         ]
         i = 1
@@ -80,7 +85,18 @@ def register():
                 VALUES (?, ?, ?, ?, ?)
             ''', (user_id, i, category_name, expense, category_icon))
             i += 1
+            
+        # Insert default wallets
+        default_wallets = [
+            (user_id, '1', 'Ví tiền mặt', 0, 'cash', '2130968585'),
+            (user_id, '2', 'Ví ngân hàng', 0, 'bank', '2130968578')
+        ]
         
+        for user_id, wallet_id, wallet_name, balance, account_type, account_icon in default_wallets:
+            cursor.execute('''
+                INSERT INTO Wallet (UserID, WalletID, Name, Balance, Type, Icon)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (user_id, wallet_id, wallet_name, balance, account_type, account_icon))
         
         conn.commit()
         return jsonify({

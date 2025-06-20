@@ -46,12 +46,12 @@
     @Composable
     fun AddBudgetScreenPreview() {
         val navController = rememberNavController()
-        AddBudgetScreen(navController = navController, account_id = "123")
+        AddBudgetScreen(navController = navController, user_id = "123")
     }
 
     @Composable
     @OptIn(ExperimentalMaterial3Api::class)
-    fun AddBudgetScreen(navController: NavHostController, account_id: String) {
+    fun AddBudgetScreen(navController: NavHostController, user_id: String) {
         var selectedTab by remember { mutableStateOf("Chi tiêu") }
         var transaction_type by remember { mutableStateOf("") }
         var soTienRaw by remember { mutableStateOf("") }
@@ -66,9 +66,9 @@
 
         // Lấy danh mục từ backend
         var danhMucList by remember { mutableStateOf<List<Category>>(emptyList()) }
-        LaunchedEffect(account_id) {
+        LaunchedEffect(user_id) {
             CoroutineScope(Dispatchers.IO).launch {
-                AuthService.getCategories(account_id).fold(
+                AuthService.getCategories(user_id).fold(
                     onSuccess = { fetchedCategories ->
                         withContext(Dispatchers.Main) {
                             danhMucList = fetchedCategories
@@ -449,7 +449,7 @@
                                 successMessage = null
                                 CoroutineScope(Dispatchers.IO).launch {
                                     AuthService.addTransaction(
-                                        account_id,
+                                        user_id,
                                         transaction_type,
                                         soTienRaw,
                                         danhMuc,
@@ -462,7 +462,7 @@
                                                 if (response.getBoolean("success")) {
                                                     successMessage = "Thêm ngân sách thành công"
                                                     delay(500)
-                                                    navController.navigate("home_screen/${account_id}") {
+                                                    navController.navigate("home_screen/${user_id}") {
                                                         popUpTo("add_budget_screen") { inclusive = true }
                                                     }
                                                 } else {

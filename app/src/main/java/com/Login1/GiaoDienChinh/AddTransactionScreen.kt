@@ -35,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.Login1.service.Category
+import com.Login1.service.Wallet
 import kotlinx.coroutines.withContext
 import java.text.DecimalFormat
 
@@ -42,12 +43,12 @@ import java.text.DecimalFormat
 @Composable
 fun AddTransactionScreenPreview() {
     val navController = rememberNavController()
-    AddTransactionScreen(navController = navController, account_id = "123")
+    AddTransactionScreen(navController = navController, user_id = "123")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddTransactionScreen(navController: NavHostController, account_id: String) {
+fun AddTransactionScreen(navController: NavHostController, user_id: String) {
     var selectedTab by remember { mutableStateOf("Chi tiêu") }
     var transaction_type by remember { mutableStateOf("expense") }
     var soTienRaw by remember { mutableStateOf("") }
@@ -56,6 +57,8 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
     var nguonTien by remember { mutableStateOf("") }
     var ghiChu by remember { mutableStateOf("") }
 
+    var selectedWalletId by remember { mutableStateOf("") }
+    var wallets by remember { mutableStateOf<List<Wallet>>(emptyList()) }
     var soTienText by remember { mutableStateOf(TextFieldValue(text = "", selection = TextRange(0))) }
     var danhMucHienThi by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
@@ -63,9 +66,9 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
 
     // Lấy danh mục từ backend
     var danhMucList by remember { mutableStateOf<List<Category>>(emptyList()) }
-    LaunchedEffect(account_id) {
+    LaunchedEffect(user_id) {
         CoroutineScope(Dispatchers.IO).launch {
-            AuthService.getCategories(account_id).fold(
+            AuthService.getCategories(user_id).fold(
                 onSuccess = { fetchedCategories ->
                     withContext(Dispatchers.Main) {
                         danhMucList = fetchedCategories
@@ -79,13 +82,21 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                     }
                 }
             )
+            AuthService.getWallets(user_id).fold(
+                onSuccess = { fetchedWallets ->
+                    withContext(Dispatchers.Main) {
+                        wallets = fetchedWallets
+                    }
+                },
+                onFailure = { exception ->
+                    withContext(Dispatchers.Main) {
+                        // handle error
+                    }
+                }
+            )
         }
     }
 
-    val nguonTienList = listOf(
-        NguonTienItem(R.drawable.cash, "Tiền mặt"),
-        NguonTienItem(R.drawable.atm, "Ngân hàng")
-    )
 
     // Lấy context để mở DatePickerDialog
     val context = LocalContext.current
@@ -120,7 +131,7 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = {
-                    navController.navigate("home_screen/${account_id}") {
+                    navController.navigate("home_screen/${user_id}") {
                         launchSingleTop = true
                     }
                 }) {
@@ -356,7 +367,7 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                             expanded = expandedNguonTien,
                             onDismissRequest = { expandedNguonTien = false }
                         ) {
-                            nguonTienList.forEach { item ->
+                            wallets.forEach { item ->
                                 DropdownMenuItem(
                                     text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -366,11 +377,12 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                                                 modifier = Modifier.size(24.dp)
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
-                                            Text(text = item.ten)
+                                            Text(text = item.name)
                                         }
                                     },
                                     onClick = {
-                                        nguonTien = item.ten
+                                        selectedWalletId = item.id
+                                        nguonTien = item.name
                                         expandedNguonTien = false
                                     }
                                 )
@@ -403,13 +415,21 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                 onClick = {
 
                     CoroutineScope(Dispatchers.IO).launch {
-                        AuthService.addTransaction(account_id, transaction_type, soTienRaw, danhMuc, ngayThang, nguonTien, ghiChu).fold(
+                        AuthService.addTransaction(
+                            user_id,
+                            transaction_type,
+                            soTienRaw,
+                            danhMuc,
+                            ngayThang,
+                            selectedWalletId,
+                            ghiChu)
+                            .fold(
                             onSuccess = { response ->
                                 CoroutineScope(Dispatchers.Main).launch {
                                     if (response.getBoolean("success")) {
 
                                         delay(500)
-                                        navController.navigate("home_screen/${account_id}") {
+                                        navController.navigate("home_screen/${user_id}") {
                                             popUpTo("add_transaction_screen") { inclusive = true }
                                         }
                                     }
