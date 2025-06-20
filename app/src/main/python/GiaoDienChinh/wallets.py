@@ -9,24 +9,24 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database import get_db_connection
 
-account_bp = Blueprint('account', __name__)
+wallet_bp = Blueprint('wallet', __name__, url_prefix='/api')
 
 # Tạo tài khoản mới
-@account_bp.route('/api/accounts', methods=['POST'])
-def create_account():
+@wallet_bp.route('/wallet', methods=['POST'])
+def create_wallet():
     data = request.get_json()
-    account_type = data.get('account_type')  # 'Tiền mặt' hoặc 'Ngân hàng'
-    account_name = data.get('account_name')
-    balance = data.get('balance', 0)
-    user_id = data.get('user_id')
+    wallet_type = data.get('Type')  # 'Tiền mặt' hoặc 'Ngân hàng'
+    wallet_name = data.get('Name')
+    balance = data.get('Balance', 0)
+    user_id = data.get('UserID')
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     # Kiểm tra loại tài khoản
-    if account_type not in ('Tiền mặt', 'Ngân hàng'):
+    if wallet_type not in ('Tiền mặt', 'Ngân hàng'):
         return jsonify({'success': False, 'message': 'Loại tài khoản không hợp lệ'}), 400
     
     # Kiểm tra thông tin bắt buộc
-    if not all([account_name, user_id]):
+    if not all([wallet_name, user_id]):
         return jsonify({'success': False, 'message': 'Thiếu thông tin bắt buộc'}), 400
 
     # Kiểm tra số dư
@@ -48,57 +48,52 @@ def create_account():
             return jsonify({'success': False, 'message': 'User không tồn tại'}), 400
 
         # Kiểm tra trùng tên tài khoản cho cùng user
-        cursor.execute('SELECT 1 FROM Account WHERE Account_name = ? AND UserID = ?', (account_name, user_id))
+        cursor.execute('SELECT 1 FROM Wallet WHERE Name = ? AND UserID = ?', (wallet_name, user_id))
         if cursor.fetchone():
             conn.close()
             return jsonify({'success': False, 'message': 'Tên tài khoản đã tồn tại'}), 400
 
         cursor.execute('''
-            INSERT INTO Account (Account_type, Account_name, Balance, UserID, Created_at, Updated_at)
+            INSERT INTO Wallet (Account_type, Account_name, Balance, UserID, Created_at, Updated_at)
             VALUES (?, ?, ?, ?, ?, ?)
-        ''', (account_type, account_name, balance, user_id, now, now))
+        ''', (wallet_type, wallet_name, balance, user_id, now, now))
         conn.commit()
-        account_id = cursor.lastrowid
+        wallet_id = cursor.lastrowid
         conn.close()
-        return jsonify({'success': True, 'account_id': account_id}), 201
+        return jsonify({'success': True, 'wallet_id': wallet_id}), 201
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-# Lấy danh sách tài khoản theo user
-@account_bp.route('/api/accounts', methods=['GET'])
-def get_accounts():
+# Xem danh sách tài khoản (ví) của user
+@wallet_bp.route('/wallets', methods=['GET'])
+def get_wallets():
     user_id = request.args.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'message': 'Thiếu user_id'}), 400
     try:
         conn = get_db_connection()
+        conn.row_factory = sqlite3.Row  # Ensure rows are dict-like
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM Account WHERE UserID = ?', (user_id,))
-        accounts = [dict(row) for row in cursor.fetchall()]
+        cursor.execute('SELECT * FROM Wallet WHERE UserID = ?', (user_id,))
+        rows = cursor.fetchall()
         conn.close()
-        return jsonify({'success': True, 'accounts': accounts}), 200
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-# Xem chi tiết tài khoản
-@account_bp.route('/api/accounts/<int:account_id>', methods=['GET'])
-def get_account_detail(account_id):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM Account WHERE AccountID = ?', (account_id,))
-        row = cursor.fetchone()
-        conn.close()
-        if row:
-            return jsonify({'success': True, 'account': dict(row)}), 200
-        else:
-            return jsonify({'success': False, 'message': 'Không tìm thấy tài khoản'}), 404
+        wallets = []
+        for row in rows:
+            wallet = {
+                'WalletID': row['WalletID'],
+                'Name': row['Name'],
+                'Type': row['Type'],
+                'Balance': row['Balance'],
+                'Icon': row['Icon'],
+                'Created_at': row['Created_at'],
+                'Updated_at': row['Updated_at']
+            }
+            wallets.append(wallet)
+        return jsonify({'success': True, 'wallets': wallets}), 200
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # Cập nhật tài khoản
-@account_bp.route('/api/accounts/<int:account_id>', methods=['PUT'])
-def update_account(account_id):
+@wallet_bp.route('/wallet/<int:wallet_id>', methods=['PUT'])
+def update_wallet(wallet_id):
     data = request.get_json()
     
     try:
@@ -106,7 +101,7 @@ def update_account(account_id):
         cursor = conn.cursor()
         
         # Kiểm tra tài khoản tồn tại
-        cursor.execute('SELECT UserID FROM Account WHERE AccountID = ?', (account_id,))
+        cursor.execute('SELECT UserID FROM Wallet WHERE AccountID = ?', (wallet_id,))
         row = cursor.fetchone()
         if not row:
             conn.close()
@@ -116,10 +111,10 @@ def update_account(account_id):
         fields = []
         values = []
         
-        for field in ['account_type', 'account_name', 'balance']:
+        for field in ['wallet_type', 'wallet_name', 'balance']:
             if field in data:
                 # Kiểm tra loại tài khoản
-                if field == 'account_type' and data[field] not in ('Tiền mặt', 'Ngân hàng'):
+                if field == 'wallet_type' and data[field] not in ('Tiền mặt', 'Ngân hàng'):
                     conn.close()
                     return jsonify({'success': False, 'message': 'Loại tài khoản không hợp lệ'}), 400
                 
@@ -135,14 +130,14 @@ def update_account(account_id):
                         return jsonify({'success': False, 'message': 'Số dư không hợp lệ'}), 400
                 
                 # Kiểm tra trùng tên khi đổi tên
-                if field == 'account_name':
-                    cursor.execute('SELECT 1 FROM Account WHERE Account_name = ? AND UserID = ? AND AccountID != ?', 
-                                 (data[field], user_id, account_id))
+                if field == 'wallet_name':
+                    cursor.execute('SELECT 1 FROM Wallet WHERE Account_name = ? AND UserID = ? AND AccountID != ?', 
+                                 (data[field], user_id, wallet_id))
                     if cursor.fetchone():
                         conn.close()
                         return jsonify({'success': False, 'message': 'Tên tài khoản đã tồn tại'}), 400
                 
-                db_field = 'Account_type' if field == 'account_type' else field.capitalize()
+                db_field = 'Account_type' if field == 'wallet_type' else field.capitalize()
                 fields.append(f"{db_field} = ?")
                 values.append(data[field])
 
@@ -151,9 +146,9 @@ def update_account(account_id):
             return jsonify({'success': False, 'message': 'Không có trường nào để cập nhật'}), 400
 
         values.append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        values.append(account_id)
+        values.append(wallet_id)
         
-        sql = f"UPDATE Account SET {', '.join(fields)}, Updated_at = ? WHERE AccountID = ?"
+        sql = f"UPDATE Wallet SET {', '.join(fields)}, Updated_at = ? WHERE AccountID = ?"
         cursor.execute(sql, values)
         conn.commit()
         conn.close()
@@ -162,18 +157,18 @@ def update_account(account_id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # Xóa tài khoản
-@account_bp.route('/api/accounts/<int:account_id>', methods=['DELETE'])
-def delete_account(account_id):
+@wallet_bp.route('/wallet/<int:wallet_id>', methods=['DELETE'])
+def delete_wallet(wallet_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         # Kiểm tra xem có transaction nào liên kết không
-        cursor.execute('SELECT COUNT(*) FROM Transactions WHERE AccountID = ?', (account_id,))
+        cursor.execute('SELECT COUNT(*) FROM Transactions WHERE AccountID = ?', (wallet_id,))
         count = cursor.fetchone()[0]
         if count > 0:
             conn.close()
             return jsonify({'success': False, 'message': 'Không thể xóa tài khoản vì còn giao dịch liên kết'}), 400
-        cursor.execute('DELETE FROM Account WHERE AccountID = ?', (account_id,))
+        cursor.execute('DELETE FROM Wallet WHERE AccountID = ?', (wallet_id,))
         conn.commit()
         conn.close()
         return jsonify({'success': True}), 200
