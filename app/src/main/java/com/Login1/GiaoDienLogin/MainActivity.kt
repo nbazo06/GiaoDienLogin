@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             HomeScreen(navController = navController, account_id = "1")
             //AddTransactionScreen(navController = navController, account_id =  "1")
-            //TransactionHistoryScreen(navController = navController, userId = "1")
+            TransactionHistoryScreen(navController = navController, userId = "1")
 
         }
     }*/
