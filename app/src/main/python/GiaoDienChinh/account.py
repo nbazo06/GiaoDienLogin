@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database import get_db_connection
 
-account_bp = Blueprint('account', __name__)
+account_bp = Blueprint('account', __name__, url_prefix='/api')
 
 # Tạo tài khoản mới
 @account_bp.route('/api/accounts', methods=['POST'])
@@ -65,18 +65,28 @@ def create_account():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # Lấy danh sách tài khoản theo user
-@account_bp.route('/api/accounts', methods=['GET'])
+@account_bp.route('/accounts', methods=['GET'])
 def get_accounts():
     user_id = request.args.get('user_id')
+    
     if not user_id:
         return jsonify({'success': False, 'message': 'Thiếu user_id'}), 400
+
     try:
         conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM Account WHERE UserID = ?', (user_id,))
-        accounts = [dict(row) for row in cursor.fetchall()]
+
+        cursor.execute('SELECT Email FROM Users WHERE UserID = ?', (user_id,))
+        row = cursor.fetchone()
+
         conn.close()
-        return jsonify({'success': True, 'accounts': accounts}), 200
+
+        if row:
+            return jsonify({'success': True, 'email': row['Email']}), 200
+        else:
+            return jsonify({'success': False, 'message': 'Không tìm thấy user'}), 404
+
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 

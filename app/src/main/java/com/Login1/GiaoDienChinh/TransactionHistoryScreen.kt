@@ -43,6 +43,7 @@ fun TransactionHistoryScreen(navController: NavHostController, account_id: Strin
     var expandedNguonTien by remember { mutableStateOf(false) }
 
     val nguonTienList = listOf(
+        NguonTienItem(R.drawable.cash, "Tất cả"),
         NguonTienItem(R.drawable.cash, "Tiền mặt"),
         NguonTienItem(R.drawable.atm, "Ngân hàng")
     )
@@ -102,7 +103,7 @@ fun TransactionHistoryScreen(navController: NavHostController, account_id: Strin
 
             FilterButtonsRow()
 
-            TransactionHistoryContent(transactions)
+            TransactionHistoryContent(transactions, nguonTien)
         }
     }
 }
@@ -245,19 +246,33 @@ fun BottomIconWithText(iconRes: Int, label: String) {
     }
 }
 
+fun filterTransactionsByNguonTien(
+    transactionsByDate: Map<String, List<GiaoDich>>,
+    nguonTien: String
+): Map<String, List<GiaoDich>> {
+    if (nguonTien == "Tất cả" || nguonTien == "") return transactionsByDate
+
+    return transactionsByDate.mapValues { (_, transactions) ->
+        transactions.filter { it.nguonTien == nguonTien }
+    }.filterValues { it.isNotEmpty() }
+}
+
 @Composable
-fun TransactionHistoryContent(transactionsByDate: Map<String, List<GiaoDich>>) {
+fun TransactionHistoryContent(
+    transactionsByDate: Map<String, List<GiaoDich>>,
+    nguonTien: String
+) {
+    val filteredTransactions = filterTransactionsByNguonTien(transactionsByDate, nguonTien)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = 150.dp)
     ) {
-        LichSuGiaoDichScreen(transactionsByDate)
+        LichSuGiaoDichScreen(filteredTransactions)
     }
 }
 
-//@Composable
-//fun BottomNavigationBar() {}
 
 @Composable
 fun LichSuGiaoDichScreen(transactionsByDate: Map<String, List<GiaoDich>>) {
