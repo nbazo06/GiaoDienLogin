@@ -13,16 +13,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.Login1.GiaoDienLogin.R
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.*
 import androidx.navigation.NavHostController
 import com.Login1.service.AuthService
 import kotlinx.coroutines.Dispatchers
@@ -32,16 +29,17 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import com.Login1.service.GiaoDich
+import com.Login1.service.Wallet
 import kotlin.math.abs
 
 //@Preview
 @Composable
-fun TransactionHistoryScreen(navController: NavHostController, account_id: String) {
+fun TransactionHistoryScreen(navController: NavHostController, user_id: String) {
     var nguonTien by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("Tháng này") }
 
     var transactions by remember { mutableStateOf<Map<String, List<GiaoDich>>>(emptyMap()) }
-    var expandedNguonTien by remember { mutableStateOf(false) }
+    var wallets by remember { mutableStateOf<List<Wallet>>(emptyList()) }
 
     val nguonTienList = listOf(
         NguonTienItem(R.drawable.cash, "Tất cả"),
@@ -49,10 +47,10 @@ fun TransactionHistoryScreen(navController: NavHostController, account_id: Strin
         NguonTienItem(R.drawable.atm, "Ngân hàng")
     )
 
-    // Load transactions
-    LaunchedEffect(account_id) {
+    // Load transactions and wallets
+    LaunchedEffect(user_id) {
         CoroutineScope(Dispatchers.IO).launch {
-            AuthService.getTransactions(account_id).fold(
+            AuthService.getTransactions(user_id).fold(
                 onSuccess = { fetchedCategories ->
                     withContext(Dispatchers.Main) {
                         transactions = fetchedCategories
@@ -64,11 +62,23 @@ fun TransactionHistoryScreen(navController: NavHostController, account_id: Strin
                     }
                 }
             )
+            AuthService.getWallets(user_id).fold(
+                onSuccess = { fetchedWallets ->
+                    withContext(Dispatchers.Main) {
+                        wallets = fetchedWallets
+                    }
+                },
+                onFailure = { exception ->
+                    withContext(Dispatchers.Main) {
+                        Log.e("TransactionHistory", "Lỗi lấy ví: ${exception.message}")
+                    }
+                }
+            )
         }
     }
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(navController, account_id) }
+        bottomBar = { BottomNavigationBar(navController, user_id) }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -104,7 +114,7 @@ fun TransactionHistoryScreen(navController: NavHostController, account_id: Strin
 
             FilterButtonsRow()
 
-            TransactionHistoryContent(transactions, nguonTien)
+            TransactionHistoryContent(transactions, nguonTien, wallets)
         }
     }
 }
@@ -113,79 +123,80 @@ fun TransactionHistoryScreen(navController: NavHostController, account_id: Strin
 @Composable
 fun TransactionHistoryScreenPreview() {
     val navController = rememberNavController()
-    TransactionHistoryScreen(navController = navController, account_id = "123")
+    TransactionHistoryScreen(navController = navController, user_id = "123")
 }
 
-//@OptIn(ExperimentalMaterial3Api::class)
-//@Composable
-//fun NguonTienDropdown(
-//    nguonTien: String,
-//    onNguonTienChange: (String) -> Unit
-//) {
-//    var expandedNguonTien by remember { mutableStateOf(false) }
-//
-//    val nguonTienList = listOf(
-//        NguonTienItem(R.drawable.cash, "Tiền mặt"),
-//        NguonTienItem(R.drawable.atm, "Ngân hàng")
-//    )
-//
-//    ExposedDropdownMenuBox(
-//        expanded = expandedNguonTien,
-//        onExpandedChange = { expandedNguonTien = !expandedNguonTien }
-//    ) {
-//        OutlinedTextField(
-//            readOnly = true,
-//            value = nguonTien,
-//            onValueChange = {},
-//            placeholder = { Text("Tổng cộng", fontSize = 20.sp) },
-//            singleLine = true,
-//            modifier = Modifier
-//                .width(170.dp)
-//                .menuAnchor(),
-//            trailingIcon = {
-//                Icon(
-//                    painter = painterResource(id = R.drawable.reorder),
-//                    contentDescription = "Dropdown Icon",
-//                    modifier = Modifier.size(24.dp)
-//                )
-//            },
-//            shape = RoundedCornerShape(15.dp),
-//            textStyle = TextStyle(fontSize = 20.sp),
-//            colors = OutlinedTextFieldDefaults.colors(
-//                focusedBorderColor = Color.White,
-//                unfocusedBorderColor = Color.White,
-//                focusedContainerColor = Color.White,
-//                unfocusedContainerColor = Color.White,
-//                disabledContainerColor = Color.White
-//            )
-//        )
-//
-//        ExposedDropdownMenu(
-//            expanded = expandedNguonTien,
-//            onDismissRequest = { expandedNguonTien = false }
-//        ) {
-//            nguonTienList.forEach { item ->
-//                DropdownMenuItem(
-//                    text = {
-//                        Row(verticalAlignment = Alignment.CenterVertically) {
-//                            Image(
-//                                painter = painterResource(id = item.iconResid),
-//                                contentDescription = null,
-//                                modifier = Modifier.size(24.dp)
-//                            )
-//                            Spacer(modifier = Modifier.width(8.dp))
-//                            Text(text = item.ten)
-//                        }
-//                    },
-//                    onClick = {
-//                        onNguonTienChange(item.ten)
-//                        expandedNguonTien = false
-//                    }
-//                )
-//            }
-//        }
-//    }
-//}
+/*
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NguonTienDropdown(
+    nguonTien: String,
+    onNguonTienChange: (String) -> Unit
+) {
+    var expandedNguonTien by remember { mutableStateOf(false) }
+
+    val nguonTienList = listOf(
+        NguonTienItem(R.drawable.cash, "Tiền mặt"),
+        NguonTienItem(R.drawable.atm, "Ngân hàng")
+    )
+
+    ExposedDropdownMenuBox(
+        expanded = expandedNguonTien,
+        onExpandedChange = { expandedNguonTien = !expandedNguonTien }
+    ) {
+        OutlinedTextField(
+            readOnly = true,
+            value = nguonTien,
+            onValueChange = {},
+            placeholder = { Text("Tổng cộng", fontSize = 20.sp) },
+            singleLine = true,
+            modifier = Modifier
+                .width(170.dp)
+                .menuAnchor(),
+            trailingIcon = {
+                Icon(
+                    painter = painterResource(id = R.drawable.reorder),
+                    contentDescription = "Dropdown Icon",
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            shape = RoundedCornerShape(15.dp),
+            textStyle = TextStyle(fontSize = 20.sp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White,
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                disabledContainerColor = Color.White
+            )
+        )
+
+        ExposedDropdownMenu(
+            expanded = expandedNguonTien,
+            onDismissRequest = { expandedNguonTien = false }
+        ) {
+            nguonTienList.forEach { item ->
+                DropdownMenuItem(
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = painterResource(id = item.iconResid),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = item.ten)
+                        }
+                    },
+                    onClick = {
+                        onNguonTienChange(item.ten)
+                        expandedNguonTien = false
+                    }
+                )
+            }
+        }
+    }
+}*/
 
 @Composable
 fun TopBarIcons() {
@@ -261,22 +272,24 @@ fun filterTransactionsByNguonTien(
 @Composable
 fun TransactionHistoryContent(
     transactionsByDate: Map<String, List<GiaoDich>>,
-    nguonTien: String
+    nguonTien: String,
+    wallets: List<Wallet>
 ) {
     val filteredTransactions = filterTransactionsByNguonTien(transactionsByDate, nguonTien)
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = 150.dp)
     ) {
-        LichSuGiaoDichScreen(filteredTransactions)
+        LichSuGiaoDichScreen(filteredTransactions, wallets)
     }
 }
 
-
 @Composable
-fun LichSuGiaoDichScreen(transactionsByDate: Map<String, List<GiaoDich>>) {
+fun LichSuGiaoDichScreen(
+    transactionsByDate: Map<String, List<GiaoDich>>,
+    wallets: List<Wallet>
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -351,6 +364,7 @@ fun LichSuGiaoDichScreen(transactionsByDate: Map<String, List<GiaoDich>>) {
 
                 // Hiển thị các giao dịch trong ngày
                 transactions.forEach { giaoDich ->
+                    val walletName = wallets.find { it.id == giaoDich.nguonTien }?.name ?: "Không rõ"
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
