@@ -378,6 +378,37 @@ class AuthService {
             }
         }
 
+
+        suspend fun getNotifications(accountId: String): Result<List<NotificationItem>> {
+            return try {
+                val response = get("$BASE_URL/notifications/$accountId")
+                if (response.getString("status") == "success") {
+                    val notificationsJsonArray = response.getJSONArray("notifications")
+                    val notifications = (0 until notificationsJsonArray.length()).map { i ->
+                        val item = notificationsJsonArray.getJSONObject(i)
+                        NotificationItem(
+                            notificationID = item.getInt("notification_id"),
+                            accountID = accountId.toInt(),
+                            userID = 0, // nếu backend không trả thì có thể mặc định là 0 hoặc bỏ luôn
+                            title = item.getString("title"),
+                            message = item.getString("message"),
+                            type = item.getString("type"),
+                            isRead = item.getBoolean("is_read"),
+                            sentAt = item.getString("sent_at")
+                        )
+                    }
+                    Result.success(notifications)
+                } else {
+                    Result.failure(Exception("Không lấy được danh sách thông báo"))
+                }
+            } catch (e: Exception) {
+                Log.e("AuthService", "Lỗi lấy notifications: ${e.message}", e)
+                Result.failure(e)
+            }
+        }
+
+
+
         suspend fun getEmail(userId: String): Result<String> {
             Log.d("AuthService", "Calling /accounts API with userId: $userId")
             return try {
@@ -395,6 +426,7 @@ class AuthService {
                 Result.failure(Exception("Không thể lấy email: ${e.message}"))
             }
         }
+
 
         suspend fun getCategories(userId: String): Result<List<Category>> {
             Log.d("AuthService", "Calling /categories API with userId: $userId")
