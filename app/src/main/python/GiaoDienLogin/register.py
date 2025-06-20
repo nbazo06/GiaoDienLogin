@@ -70,12 +70,7 @@ def register():
             ('Hóa đơn', 'expense', '2130968584'),
             ('Chợ, siêu thị', 'expense', '2130968612'),
             ('Di chuyển', 'expense', '2130968597'),
-            ('Sức khỏe', 'expense', '2130968600'),
-            ('Giáo dục', 'expense', '2130968601'),
-            ('Tiết kiệm', 'income', '2130968596'),
-            ('Mua sắm', 'expense', '2130968599'),
-            ('Lương', 'income', '2130968602'),
-            ('Trợ cấp', 'income', '2130968603'),
+            
             ('Khác', 'expense', '2130968586')
         ]
         i = 1
