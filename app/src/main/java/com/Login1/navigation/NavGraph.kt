@@ -13,6 +13,7 @@ import com.Login1.GiaoDienChinh.HomeScreen
 import com.Login1.GiaoDienChinh.AddTransactionScreen
 import com.Login1.GiaoDienChinh.BudgetScreen
 import com.Login1.GiaoDienChinh.TransactionHistoryScreen
+import com.Login1.GiaoDienChinh.ModifyTransactionScreen
 import com.Login1.GiaoDienChinh.PersonalScreen
 
 @Composable
@@ -41,29 +42,34 @@ fun SetupNavGraph(
             val email = backStackEntry.arguments?.getString("email") ?: ""
             NewPasswordScreen(navController = navController, email)
         }
-        composable(route = "home_screen/{account_id}") { backStackEntry ->
-            val account_id = backStackEntry.arguments?.getString("account_id") ?: ""
-            HomeScreen(navController = navController, account_id)
+        composable(route = "home_screen/{user_id}") { backStackEntry ->
+            val user_id = backStackEntry.arguments?.getString("user_id") ?: ""
+            HomeScreen(navController = navController, user_id)
         }
-        composable(route = "add_transaction_screen/{account_id}") { backStackEntry ->
-            val account_id = backStackEntry.arguments?.getString("account_id") ?: ""
-            AddTransactionScreen(navController = navController, account_id)
+        composable(route = "add_transaction_screen/{user_id}") { backStackEntry ->
+            val user_id = backStackEntry.arguments?.getString("user_id") ?: ""
+            AddTransactionScreen(navController = navController, user_id)
         }
-        composable(route = "transaction_history_screen/{account_id}") { backStackEntry ->
-            val account_id = backStackEntry.arguments?.getString("account_id") ?: ""
-            TransactionHistoryScreen(navController = navController, account_id)
+        composable(route = "transaction_history_screen/{user_id}") { backStackEntry ->
+            val user_id = backStackEntry.arguments?.getString("user_id") ?: ""
+            TransactionHistoryScreen(navController = navController, user_id)
         }
-        composable(route = "budget_screen/{account_id}") { backStackEntry ->
-            val account_id = backStackEntry.arguments?.getString("account_id") ?: ""
-            BudgetScreen(navController = navController, account_id)
+        composable(route = "budget_screen/{user_id}") { backStackEntry ->
+            val user_id = backStackEntry.arguments?.getString("user_id") ?: ""
+            BudgetScreen(navController = navController, user_id)
         }
-        composable(route = "add_budget_screen/{account_id}") { backStackEntry ->
-            val account_id = backStackEntry.arguments?.getString("account_id") ?: ""
-            BudgetScreen(navController = navController, account_id)
+        composable(route = "add_budget_screen/{user_id}") { backStackEntry ->
+            val user_id = backStackEntry.arguments?.getString("user_id") ?: ""
+            BudgetScreen(navController = navController, user_id)
         }
-        composable(route = "personal_screen/{account_id}") { backStackEntry ->
-            val account_id = backStackEntry.arguments?.getString("account_id") ?: ""
-            PersonalScreen(navController = navController, account_id)
+        composable(route = "personal_screen/{user_id}") { backStackEntry ->
+            val user_id = backStackEntry.arguments?.getString("user_id") ?: ""
+            PersonalScreen(navController = navController, user_id)
+        }
+        composable(route = "modify_transaction_screen/{user_id}/{transaction_id}") { backStackEntry ->
+            val user_id = backStackEntry.arguments?.getString("user_id") ?: ""
+            val transaction_id = backStackEntry.arguments?.getString("transaction_id") ?: ""
+            ModifyTransactionScreen(navController = navController, user_id, transaction_id)
         }
     }
 } 
