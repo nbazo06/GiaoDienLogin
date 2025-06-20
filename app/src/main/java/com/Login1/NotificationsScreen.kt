@@ -1,5 +1,11 @@
 package com.Login1
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,19 +14,29 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.Login1.GiaoDienChinh.BottomNavigationBar
+import com.Login1.GiaoDienLogin.R
+import com.Login1.service.AuthService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 
-// ==== MODEL PHÙ HỢP DATABASE ====
+// ==== MODEL PHÙ HỢP BACKEND ====
 data class NotificationItem(
     val notificationID: Int,
     val accountID: Int,
@@ -32,47 +48,45 @@ data class NotificationItem(
     val sentAt: String
 )
 
-// ==== DỮ LIỆU GIẢ ====
-val sampleNotifications = listOf(
-    NotificationItem(
-        notificationID = 1,
-        accountID = 123,
-        userID = 456,
-        title = "Cảnh báo ngân sách",
-        message = "Số tiền cho ngân sách Ăn uống đã vượt mức 80%",
-        type = "Cảnh báo",
-        isRead = false,
-        sentAt = "2025-06-18 10:30:00"
-    ),
-    NotificationItem(
-        notificationID = 2,
-        accountID = 123,
-        userID = 456,
-        title = "Cảnh báo ngân sách",
-        message = "Ngân sách Giải trí còn lại dưới 10%",
-        type = "Cảnh báo",
-        isRead = true,
-        sentAt = "2025-06-17 09:15:00"
-    ),
-    NotificationItem(
-        notificationID = 3,
-        accountID = 123,
-        userID = 456,
-        title = "Giao dịch mới",
-        message = "Đã thêm một giao dịch mới vào ngân sách Di chuyển",
-        type = "Thông báo",
-        isRead = true,
-        sentAt = "2025-06-16 14:22:00"
-    )
-)
-
 // ==== MÀN HÌNH HIỂN THỊ THÔNG BÁO ====
 @Composable
 fun NotificationScreen(
     navController: NavHostController,
-    account_id: String,
-    notifications: List<NotificationItem>
+    account_id: String
 ) {
+    val context = LocalContext.current
+    var notifications by remember { mutableStateOf<List<NotificationItem>>(emptyList()) }
+
+    // Gọi API khi account_id thay đổi
+    LaunchedEffect(account_id) {
+        val result = AuthService.get("${
+            AuthService.BASE_URL
+        }/notifications/$account_id")
+
+        if (result.optString("status") == "success") {
+            val data = result.optJSONArray("notifications") ?: JSONArray()
+            notifications = (0 until data.length()).map { i ->
+                val item = data.getJSONObject(i)
+                NotificationItem(
+                    notificationID = item.getInt("notification_id"),
+                    accountID = account_id.toInt(),
+                    userID = 0, // nếu backend chưa trả userID thì gán 0
+                    title = item.getString("title"),
+                    message = item.getString("message"),
+                    type = item.getString("type"),
+                    isRead = item.getBoolean("is_read"),
+                    sentAt = item.getString("sent_at")
+                )
+            }
+
+            // Gửi thông báo local nếu có cảnh báo chưa đọc
+            val warningNoti = notifications.filter { it.type == "Cảnh báo" && !it.isRead }
+            warningNoti.forEach {
+                sendLocalNotification(context, it.title, it.message)
+            }
+        }
+    }
+
     Scaffold(
         bottomBar = { BottomNavigationBar(navController, account_id) }
     ) { paddingValues ->
@@ -146,7 +160,7 @@ fun NotificationScreen(
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "${notification.sentAt}",
+                                            text = notification.sentAt,
                                             fontSize = 12.sp,
                                             color = Color.Gray
                                         )
@@ -166,6 +180,46 @@ fun NotificationScreen(
     }
 }
 
+// ==== GỬI LOCAL NOTIFICATION ====
+fun sendLocalNotification(context: Context, title: String, message: String) {
+    val channelId = "budget_channel"
+    val notificationId = System.currentTimeMillis().toInt() // để không bị đè lặp
+
+    // Tạo channel nếu cần
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+            channelId,
+            "Thông báo ngân sách",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Thông báo về giới hạn ngân sách"
+        }
+
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
+    }
+
+    // Tạo thông báo
+    val builder = NotificationCompat.Builder(context, channelId)
+        .setSmallIcon(R.drawable.bell) // icon phải tồn tại trong drawable
+        .setContentTitle(title)
+        .setContentText(message)
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setAutoCancel(true)
+
+    // Kiểm tra quyền
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    ) {
+        NotificationManagerCompat.from(context).notify(notificationId, builder.build())
+    } else {
+        Log.e("NotifyError", "Thiếu quyền POST_NOTIFICATIONS, không gửi được thông báo.")
+    }
+}
+
 // ==== PREVIEW ====
 @Preview(showBackground = true)
 @Composable
@@ -173,7 +227,6 @@ fun NotificationScreenPreview() {
     val navController = rememberNavController()
     NotificationScreen(
         navController = navController,
-        account_id = "123",
-        notifications = sampleNotifications
+        account_id = "123"
     )
 }
