@@ -362,6 +362,24 @@ class AuthService {
             }
         }
 
+        suspend fun getEmail(userId: String): Result<String> {
+            Log.d("AuthService", "Calling /accounts API with userId: $userId")
+            return try {
+                val response = get("$BASE_URL/accounts?user_id=$userId")
+                Log.d("AuthService", "Response: $response")
+
+                return if (response.getBoolean("success")) {
+                    val email = response.getString("email")
+                    Result.success(email)
+                } else {
+                    Result.failure(Exception(response.getString("message")))
+                }
+            } catch (e: Exception) {
+                Log.e("AuthService", "Lỗi khi lấy email: ${e.message}", e)
+                Result.failure(Exception("Không thể lấy email: ${e.message}"))
+            }
+        }
+
         suspend fun getCategories(userId: String): Result<List<Category>> {
             Log.d("AuthService", "Calling /categories API with userId: $userId")
             return try {

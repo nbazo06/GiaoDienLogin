@@ -1,5 +1,6 @@
 package com.Login1.GiaoDienChinh
 
+import android.util.Log
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
@@ -10,36 +11,42 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.*
+import com.Login1.service.AuthService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.Login1.service.DatabaseHelper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 @Preview(showBackground = true)
 @Composable
 fun PersonalScreenPreview() {
     val navController = rememberNavController()
-    PersonalScreen(navController = navController, userId = "123")
+    PersonalScreen(navController = navController, userId = "1")
 }
 
-data class User(
-    val fullName: String,
-    val phoneNumber: String
+data class Email(
+    val fullEmail: String
 ) {
-    // Lấy chữ cái đầu của họ và tên cuối (VD: "Nguyễn Đỗ Gia Bảo" → "NĐ")
     val initials: String
         get() {
-            val parts = fullName.trim().split(" ")
+            val parts = fullEmail.trim().split(" ")
             return when {
-                parts.size >= 2 -> "${parts.first().first()}${parts.last().first()}".uppercase()
+                //parts.size >= 2 -> "${parts.first().first()}".uppercase()
                 parts.isNotEmpty() -> parts.first().take(2).uppercase()
                 else -> "??"
             }
@@ -47,7 +54,7 @@ data class User(
 }
 
 @Composable
-fun PersonalCard(user: User) {
+fun PersonalCard(navController: NavHostController, email: Email) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -68,15 +75,9 @@ fun PersonalCard(user: User) {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = user.fullName,
+                    text = email.fullEmail,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
-                )
-
-                Text(
-                    text = user.phoneNumber,
-                    fontSize = 12.sp,
-                    color = Color.Gray
                 )
 
                 HorizontalDivider(
@@ -89,7 +90,11 @@ fun PersonalCard(user: User) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { /* Xử lý đăng xuất */ }
+                        .clickable {
+                            navController.navigate("login_screen") {
+                                popUpTo("personal_screen") { inclusive = true }
+                            }
+                        }
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -105,7 +110,7 @@ fun PersonalCard(user: User) {
                         fontSize = 14.sp
                     )
                     Icon(
-                        imageVector = Icons.Default.ArrowForwardIos,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                         contentDescription = "Go",
                         tint = Color.Gray,
                         modifier = Modifier.size(16.dp)
@@ -123,7 +128,11 @@ fun PersonalCard(user: User) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { /* Xử lý đổi tài khoản */ }
+                        .clickable {
+                            navController.navigate("login_screen") {
+                                popUpTo("personal_screen") { inclusive = true }
+                            }
+                        }
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -139,7 +148,7 @@ fun PersonalCard(user: User) {
                         fontSize = 14.sp
                     )
                     Icon(
-                        imageVector = Icons.Default.ArrowForwardIos,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                         contentDescription = "Go",
                         tint = Color.Gray,
                         modifier = Modifier.size(16.dp)
@@ -157,7 +166,7 @@ fun PersonalCard(user: User) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = user.initials,
+                text = email.initials,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
@@ -167,10 +176,24 @@ fun PersonalCard(user: User) {
 
 @Composable
 fun PersonalScreen(navController: NavHostController, userId: String) {
-    val currentUser = User(
-        fullName = "Nguyễn Đỗ Gia Bảo",
-        phoneNumber = "0911874264"
-    )
+    var email by remember { mutableStateOf("Đang tải...") }
+
+    LaunchedEffect(userId) {
+        CoroutineScope(Dispatchers.IO).launch {
+            AuthService.getEmail(userId).fold(
+                onSuccess = { fetchedemail ->
+                    withContext(Dispatchers.Main) {
+                        email = fetchedemail
+                    }
+                },
+                onFailure = { exception ->
+                    withContext(Dispatchers.Main) {
+                        Log.e("PersonalScreen", "Lỗi: ${exception.message}")
+                    }
+                }
+            )
+        }
+    }
 
     Scaffold(
         bottomBar = { BottomNavigationBar(navController, userId) }
@@ -181,7 +204,7 @@ fun PersonalScreen(navController: NavHostController, userId: String) {
                 .fillMaxSize()
                 .background(Color(0xFFD9D9D9))
         ) {
-            PersonalCard(user = currentUser)
+            PersonalCard(navController, Email(email))
         }
     }
 }
