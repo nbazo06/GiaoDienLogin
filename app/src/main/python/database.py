@@ -32,16 +32,18 @@ def init_db():
             )
         ''')
 
-        # Account table
+        # Wallets table
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS Account (
-                AccountID INTEGER PRIMARY KEY AUTOINCREMENT,
-                Account_type TEXT NOT NULL,
-                Account_name TEXT NOT NULL,
-                Balance REAL NOT NULL DEFAULT 0,
+            CREATE TABLE IF NOT EXISTS Wallet (
                 UserID INTEGER NOT NULL,
+                WalletID INTEGER NOT NULL,
+                Name TEXT NOT NULL,
+                Balance REAL NOT NULL DEFAULT 0,
+                Type TEXT NOT NULL,
+                Icon INTEGER NOT NULL,
                 Created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 Updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY(WalletID, UserID),
                 FOREIGN KEY(UserID) REFERENCES User(UserID)
             )
         ''')
@@ -83,16 +85,16 @@ def init_db():
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS Transactions (
                 TransactionID INTEGER PRIMARY KEY AUTOINCREMENT,
-                AccountID INTEGER NOT NULL,
+                UserID INTEGER NOT NULL,
                 Transaction_type TEXT NOT NULL,
                 Amount REAL NOT NULL,
                 CategoryID INTEGER NOT NULL,
                 Transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                Money_source TEXT NOT NULL,
+                WalletID TEXT NOT NULL,
                 Created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 Updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 Note TEXT,
-                FOREIGN KEY(AccountID) REFERENCES Account(AccountID),
+                FOREIGN KEY(WalletID) REFERENCES Wallets(WalletID),
                 FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID)
             )
         ''')
@@ -100,19 +102,19 @@ def init_db():
         # Budget table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS Budget (
-                BudgetID INTEGER PRIMARY KEY AUTOINCREMENT,
+                BudgetID INTEGER NOT NULL,
                 UserID INTEGER NOT NULL,
                 CategoryID INTEGER NOT NULL,
                 Budget_limit REAL NOT NULL,
-                Repeat_type TEXT CHECK(Repeat_type IN ('none', 'daily', 'weekly', 'monthly', 'yearly')) DEFAULT 'none',
                 Created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 Updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 Start_date TIMESTAMP,
                 End_date TIMESTAMP,
-                AccountID INTEGER NOT NULL,
+                WalletID INTEGER NOT NULL,
+                PRIMARY KEY(BudgetID, UserID),
                 FOREIGN KEY(UserID) REFERENCES User(UserID),
                 FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID),
-                FOREIGN KEY(AccountID) REFERENCES Account(AccountID)
+                FOREIGN KEY(WalletID) REFERENCES Wallets(WalletID)
             )
         ''')
 
@@ -120,14 +122,14 @@ def init_db():
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS Notification (
                 NotificationID INTEGER PRIMARY KEY AUTOINCREMENT,
-                AccountID INTEGER NOT NULL,
+                WalletID INTEGER NOT NULL,
                 Title TEXT NOT NULL,
                 Message TEXT,
                 Type TEXT,
                 Is_read INTEGER DEFAULT 0,
                 Sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UserID INTEGER NOT NULL,
-                FOREIGN KEY(AccountID) REFERENCES Account(AccountID),
+                FOREIGN KEY(WalletID) REFERENCES Wallets(WalletID),
                 FOREIGN KEY(UserID) REFERENCES User(UserID)
             )
         ''')

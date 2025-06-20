@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 
 notifications_bp = Blueprint('notifications', __name__, url_prefix='/api/notifications')
 
-@notifications_bp.route('/<account_id>', methods=['GET'])
-def get_notifications(account_id):
+@notifications_bp.route('/<user_id>', methods=['GET'])
+def get_notifications(user_id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -70,9 +70,9 @@ def get_notifications(account_id):
         cursor.execute('''
             SELECT NotificationID, Title, Message, Type, Is_read, Sent_at
             FROM Notification
-            WHERE AccountID = ?
+            WHERE UserID = ?
             ORDER BY Sent_at DESC
-        ''', (account_id,))
+        ''', (user_id,))
         
         rows = cursor.fetchall()
 
@@ -89,7 +89,7 @@ def get_notifications(account_id):
 
         return jsonify({
             "status": "success",
-            "account_id": account_id,
+            "user_id": user_id,
             "notifications": notifications
         })
 

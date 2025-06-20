@@ -39,14 +39,14 @@ import java.text.DecimalFormat
 @Composable
 fun ModifyTransactionScreenPreview() {
     val navController = rememberNavController()
-    ModifyTransactionScreen(navController = navController, account_id = "123")
+    ModifyTransactionScreen(navController = navController, account_id = "1", transaction_id = "123")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ModifyTransactionScreen(navController: NavHostController, account_id: String) {
-    var transaction_type by remember { mutableStateOf("") }
+fun ModifyTransactionScreen(navController: NavHostController, account_id: String, transaction_id: String) {
     var soTienRaw by remember { mutableStateOf("") }
+    var transaction_type by remember { mutableStateOf("") }
     var danhMuc by remember { mutableStateOf("") }
     var ngayThang by remember { mutableStateOf("") }
     var nguonTien by remember { mutableStateOf("") }
@@ -59,9 +59,9 @@ fun ModifyTransactionScreen(navController: NavHostController, account_id: String
 
     // Lấy danh mục từ backend
     var danhMucList by remember { mutableStateOf<List<Category>>(emptyList()) }
-    LaunchedEffect(account_id) {
+    LaunchedEffect(transaction_id) {
         CoroutineScope(Dispatchers.IO).launch {
-            AuthService.getCategories(account_id).fold(
+            AuthService.getCategories(transaction_id).fold(
                 onSuccess = { fetchedCategories ->
                     withContext(Dispatchers.Main) {
                         danhMucList = fetchedCategories
@@ -115,7 +115,7 @@ fun ModifyTransactionScreen(navController: NavHostController, account_id: String
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = {
-                    navController.navigate("home_screen/${account_id}") {
+                    navController.navigate("transaction_history_screen/${account_id}") {
                         launchSingleTop = true
                     }
                 }) {
@@ -374,15 +374,14 @@ fun ModifyTransactionScreen(navController: NavHostController, account_id: String
             Button(
                 onClick = {
 
-                    CoroutineScope(Dispatchers.IO).launch {
-                        AuthService.addTransaction(account_id, transaction_type, soTienRaw, danhMuc, ngayThang, nguonTien, ghiChu).fold(
+                    /*CoroutineScope(Dispatchers.IO).launch {
+                        AuthService.updateTransaction(transaction_id, soTienRaw, transaction_type, danhMuc, ngayThang, nguonTien, ghiChu).fold(
                             onSuccess = { response ->
                                 CoroutineScope(Dispatchers.Main).launch {
                                     if (response.getBoolean("success")) {
-
                                         delay(500)
-                                        navController.navigate("home_screen/${account_id}") {
-                                            popUpTo("add_transaction_screen") { inclusive = true }
+                                        navController.navigate("transaction_history_screen/${account_id}") {
+                                            popUpTo("modify_transaction_screen") { inclusive = true }
                                         }
                                     }
                                 }
@@ -394,7 +393,7 @@ fun ModifyTransactionScreen(navController: NavHostController, account_id: String
                                 }
                             }
                         )
-                    }
+                    }*/
                 },
                 modifier = Modifier
                     .fillMaxWidth()
