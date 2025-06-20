@@ -374,7 +374,7 @@ fun ModifyTransactionScreen(navController: NavHostController, account_id: String
             Button(
                 onClick = {
 
-                    CoroutineScope(Dispatchers.IO).launch {
+                    /*CoroutineScope(Dispatchers.IO).launch {
                         AuthService.updateTransaction(transaction_id, soTienRaw, transaction_type, danhMuc, ngayThang, nguonTien, ghiChu).fold(
                             onSuccess = { response ->
                                 CoroutineScope(Dispatchers.Main).launch {
@@ -393,7 +393,7 @@ fun ModifyTransactionScreen(navController: NavHostController, account_id: String
                                 }
                             }
                         )
-                    }
+                    }*/
                 },
                 modifier = Modifier
                     .fillMaxWidth()

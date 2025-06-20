@@ -44,6 +44,11 @@ fun TransactionHistoryScreen(navController: NavHostController, user_id: String) 
     var selectedFilter by remember { mutableStateOf("Tháng này") }
     var transactions by remember { mutableStateOf<Map<String, List<GiaoDich>>>(emptyMap()) }
     var wallets by remember { mutableStateOf<List<Wallet>>(emptyList()) }
+    var reloadTrigger by remember { mutableStateOf(0) }
+    // Đưa state dialog lên đây
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var transactionToDelete by remember { mutableStateOf<GiaoDich?>(null) }
+    var resetDialogKey by remember { mutableStateOf(0) }
 
     val nguonTienList = listOf(
         NguonTienItem(R.drawable.cash, "Tất cả"),
@@ -52,7 +57,7 @@ fun TransactionHistoryScreen(navController: NavHostController, user_id: String) 
     )
 
     // Load transactions and wallets
-    LaunchedEffect(user_id) {
+    LaunchedEffect(user_id, reloadTrigger) {
         CoroutineScope(Dispatchers.IO).launch {
             AuthService.getTransactions(user_id).fold(
                 onSuccess = { fetchedCategories ->
@@ -80,18 +85,6 @@ fun TransactionHistoryScreen(navController: NavHostController, user_id: String) 
             )
         }
     }
-//    LaunchedEffect(Unit) {
-//        val fakeTransactions = listOf(
-//            GiaoDich(20000, "Ăn sáng", false, "20-06-2025", "Tiền mặt", R.drawable.ramen),
-//            GiaoDich(5000000, "Tiền lương", true, "20-06-2025", "Ngân hàng", R.drawable.cash),
-//            GiaoDich(100000, "Mua sách", false, "20-06-2025", "Tiền mặt", R.drawable.onlineshopping),
-//            GiaoDich(300000, "Đi chơi", false, "19-06-2025", "Tiền mặt", R.drawable.cash),
-//            GiaoDich(1000000, "Làm thêm", true, "19-06-2025", "Ngân hàng", R.drawable.cash)
-//        )
-//        val grouped = fakeTransactions.groupBy { it.ngay }
-//        transactions = grouped
-//    }
-
 
     Scaffold(
         bottomBar = { BottomNavigationBar(navController, user_id) }
@@ -123,7 +116,62 @@ fun TransactionHistoryScreen(navController: NavHostController, user_id: String) 
 
             TopBarIcons()
             FilterButtonsRow()
-            TransactionHistoryContent(transactions, nguonTien, wallets)
+            TransactionHistoryContent(
+                navController = navController,
+                transactionsByDate = transactions,
+                nguonTien = nguonTien,
+                wallets = wallets,
+                user_id = user_id,
+                onSwipeDelete = { giaoDich ->
+                    Log.d("Swipe", "Swipe delete called for: ${giaoDich.id}")
+                    transactionToDelete = giaoDich.copy()
+                    showDeleteDialog = true
+                },
+                onSwipeEdit = { giaoDich ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val result = AuthService.deleteTransaction(giaoDich.id)
+                        withContext(Dispatchers.Main) {
+                            if (result.isSuccess) {
+                                reloadTrigger++
+                                navController.navigate("add_transaction_screen/${user_id}")
+                            }
+                        }
+                    }
+                },
+                resetDialogKey = resetDialogKey,
+                onDeleteTransaction = { transactionId ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            val result = AuthService.deleteTransaction(transactionId)
+                            if (result.isSuccess) {
+                                withContext(Dispatchers.Main) { reloadTrigger++ }
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+            )
+            // Dialog xác nhận xóa
+            if (showDeleteDialog && transactionToDelete != null) {
+                DeleteConfirmationDialog(
+                    onDismiss = {
+                        showDeleteDialog = false
+                        resetDialogKey++
+                    },
+                    onConfirmDelete = {
+                        showDeleteDialog = false
+                        transactionToDelete?.let { giaoDich ->
+                            // Gọi xóa
+                            CoroutineScope(Dispatchers.IO).launch {
+                                AuthService.deleteTransaction(giaoDich.id)
+                                withContext(Dispatchers.Main) {
+                                    reloadTrigger++
+                                }
+                            }
+                        }
+                        resetDialogKey++
+                    }
+                )
+            }
         }
     }
 }
@@ -208,9 +256,15 @@ fun filterTransactionsByNguonTien(
 
 @Composable
 fun TransactionHistoryContent(
+    navController: NavHostController,
     transactionsByDate: Map<String, List<GiaoDich>>,
     nguonTien: String,
-    wallets: List<Wallet>
+    wallets: List<Wallet>,
+    user_id: String,
+    onSwipeDelete: (GiaoDich) -> Unit,
+    onSwipeEdit: (GiaoDich) -> Unit,
+    resetDialogKey: Int,
+    onDeleteTransaction: (String) -> Unit
 ) {
     val filteredTransactions = filterTransactionsByNguonTien(transactionsByDate, nguonTien)
     Column(
@@ -218,19 +272,18 @@ fun TransactionHistoryContent(
             .fillMaxSize()
             .padding(top = 150.dp)
     ) {
-        LichSuGiaoDichScreen(filteredTransactions, wallets)
+        LichSuGiaoDichScreen(filteredTransactions, wallets, onSwipeDelete, onSwipeEdit, resetDialogKey)
     }
 }
 
 @Composable
 fun LichSuGiaoDichScreen(
     transactionsByDate: Map<String, List<GiaoDich>>,
-    wallets: List<Wallet>
+    wallets: List<Wallet>,
+    onSwipeDelete: (GiaoDich) -> Unit,
+    onSwipeEdit: (GiaoDich) -> Unit,
+    resetDialogKey: Int
 ) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var transactionToDelete by remember { mutableStateOf<GiaoDich?>(null) }
-    val coroutineScope = rememberCoroutineScope()
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -294,13 +347,9 @@ fun LichSuGiaoDichScreen(
                         wallets.find { it.id == giaoDich.nguonTien }?.name ?: "Không rõ"
                     SwipeableTransactionItem(
                         giaoDich = giaoDich,
-                        onSwipeDelete = {
-                            transactionToDelete = giaoDich
-                            showDeleteDialog = true
-                        },
-                        onSwipeEdit = {
-                            // TODO: chuyển sang màn sửa hoặc hiển thị dialog
-                        }
+                        onSwipeDelete = { onSwipeDelete(giaoDich) },
+                        onSwipeEdit = { onSwipeEdit(giaoDich) },
+                        resetDialogKey = resetDialogKey
                     ) {
                         Row(
                             modifier = Modifier
@@ -330,28 +379,6 @@ fun LichSuGiaoDichScreen(
             }
             Spacer(modifier = Modifier.height(12.dp))
         }
-    }
-
-    if (showDeleteDialog && transactionToDelete != null) {
-        DeleteConfirmationDialog(
-            onDismiss = { showDeleteDialog = false },
-            onConfirmDelete = {
-                showDeleteDialog = false
-                transactionToDelete?.let { giaoDich ->
-                    // Gọi API xóa transaction
-                    coroutineScope.launch {
-                        try {
-                            val transactionId = giaoDich.id
-                            val result = AuthService.deleteTransaction(transactionId)
-                            // Sau khi xóa thành công, bạn nên reload lại danh sách giao dịch
-                            // ... gọi lại API lấy transactions ...
-                        } catch (e: Exception) {
-                            // Xử lý lỗi nếu cần
-                        }
-                    }
-                }
-            }
-        )
     }
 }
 
@@ -442,41 +469,35 @@ fun SwipeableTransactionItem(
     giaoDich: GiaoDich,
     onSwipeDelete: () -> Unit,
     onSwipeEdit: () -> Unit,
+    resetDialogKey: Int,
     content: @Composable () -> Unit
 ) {
-    var offsetX by remember { mutableStateOf(0f) }
+    var offsetX by remember(resetDialogKey) { mutableStateOf(0f) }
     val swipeThreshold = 120f
-    var actionTriggered by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .pointerInput(Unit) {
+            .pointerInput(resetDialogKey) {
                 detectDragGestures(
                     onDragEnd = {
-                        if (offsetX <= -swipeThreshold && !actionTriggered) {
+                        if (offsetX <= -swipeThreshold) {
                             onSwipeDelete()
-                            actionTriggered = true
-                        } else if (offsetX >= swipeThreshold && !actionTriggered) {
+                        } else if (offsetX >= swipeThreshold) {
                             onSwipeEdit()
-                            actionTriggered = true
-                        } else {
-                            // Nếu chưa đủ ngưỡng thì reset lại vị trí
-                            offsetX = 0f
-                            actionTriggered = false
                         }
+                        offsetX = 0f // luôn reset swipe về vị trí cũ
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        // Giới hạn kéo tối đa để không bị trượt quá xa
                         offsetX = (offsetX + dragAmount.x).coerceIn(-300f, 300f)
                     }
                 )
             }
     ) {
         // Background hành động
-        if (offsetX < -swipeThreshold) {
+        if (offsetX < -swipeThreshold / 2) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -487,7 +508,7 @@ fun SwipeableTransactionItem(
             ) {
                 Text("Xóa", color = Color.White, fontWeight = FontWeight.Bold)
             }
-        } else if (offsetX > swipeThreshold) {
+        } else if (offsetX > swipeThreshold / 2) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
