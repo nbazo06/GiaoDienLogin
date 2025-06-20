@@ -75,6 +75,7 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
                 onFailure = { exception ->
                     withContext(Dispatchers.Main) {
                         Log.e("AddTransactionScreen", "Lỗi: ${exception.message}")
+                        Log.e("AddTransactionScreen", "Lỗi: ${exception.message}")
                     }
                 }
             )
@@ -206,7 +207,7 @@ fun AddTransactionScreen(navController: NavHostController, account_id: String) {
 
                             soTienRaw = digitsOnly
 
-                            val formatted = DecimalFormat("#,###").format(digitsOnly).replace(",", ".")
+                            val formatted = DecimalFormat("#,###").format(digitsOnly.toLongOrNull() ?: 0).replace(",", ".")
 
                             // Cập nhật TextFieldValue và đặt dấu nháy về cuối
                             soTienText = TextFieldValue(
