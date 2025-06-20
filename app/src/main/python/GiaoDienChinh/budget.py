@@ -3,102 +3,53 @@ import sqlite3
 import os
 from datetime import datetime
 
-# Get relative path from current file location
-current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
-DB_PATH = os.path.join(project_root, 'database', 'login_database.db')
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Create database directory if it doesn't exist
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+from database import get_db_connection
 
 budget_bp = Blueprint('budget', __name__)
-
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 @budget_bp.route('/api/budgets', methods=['POST'])
 def create_budget():
     """Tạo ngân sách mới cho một danh mục"""
     data = request.get_json()
-    user_id = data.get('user_id')
-    category_id = data.get('category_id')
-    account_id = data.get('account_id')
-    budget_limit = data.get('budget_limit')
-    repeat_type = data.get('repeat_type', 'none')
-    start_date = data.get('start_date', datetime.now().strftime('%Y-%m-%d'))
-    end_date = data.get('end_date')
+    user_id = data.get('UserID')
+    category_id = data.get('CategoryID')
+    budget_limit = data.get('Budget_limit')
+    wallet_id = data.get('WalletID')
+    start_date = data.get('Start_date', datetime.now().strftime('%Y-%m-%d'))
+    end_date = data.get('End_date')
 
     # Validate required fields
-    if not all([user_id, category_id, account_id, budget_limit]):
+    if not all([user_id, category_id, wallet_id, budget_limit]):
         return jsonify({
             'success': False,
-            'message': 'Thiếu thông tin bắt buộc (user_id, category_id, account_id, budget_limit)'
-        }), 400
-
-    # Validate repeat_type
-    valid_repeat_types = ['none', 'daily', 'weekly', 'monthly', 'yearly']
-    if repeat_type not in valid_repeat_types:
-        return jsonify({
-            'success': False,
-            'message': f'Repeat_type phải là một trong các giá trị: {", ".join(valid_repeat_types)}'
+            'message': 'Thiếu thông tin bắt buộc (user_id, category_id, wallet_id, budget_limit)'
         }), 400
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Check if category exists and belongs to user
+        # Lấy CategoryID tiếp theo cho UserID
         cursor.execute('''
-            SELECT CategoryID FROM Category 
-            WHERE CategoryID = ? AND UserID = ?
-        ''', (category_id, user_id))
-        if not cursor.fetchone():
-            return jsonify({
-                'success': False,
-                'message': 'Danh mục không tồn tại hoặc không thuộc về người dùng này'
-            }), 404
-
-        # Check if account exists and belongs to user
-        cursor.execute('''
-            SELECT AccountID FROM Account 
-            WHERE AccountID = ? AND UserID = ?
-        ''', (account_id, user_id))
-        if not cursor.fetchone():
-            return jsonify({
-                'success': False,
-                'message': 'Tài khoản không tồn tại hoặc không thuộc về người dùng này'
-            }), 404
-
-        # Check if budget already exists for this category and account
-        cursor.execute('''
-            SELECT BudgetID FROM Budget 
-            WHERE CategoryID = ? AND AccountID = ? AND UserID = ? 
-            AND (
-                (? BETWEEN Start_date AND End_date)
-                OR (? BETWEEN Start_date AND End_date)
-                OR (Start_date BETWEEN ? AND ?)
-                OR (End_date IS NULL AND Start_date <= ?)
-            )
-        ''', (category_id, account_id, user_id, start_date, end_date, 
-              start_date, end_date, end_date))
+            SELECT IFNULL(MAX(BudgetID), 0) + 1 AS NextBudgetID
+            FROM Budget
+            WHERE UserID = ?
+        ''', (user_id,))
+        next_budget_id = cursor.fetchone()['NextBudgetID']
         
-        if cursor.fetchone():
-            return jsonify({
-                'success': False,
-                'message': 'Đã tồn tại ngân sách cho danh mục và tài khoản này trong khoảng thời gian đã chọn'
-            }), 400
-
         # Create new budget
         cursor.execute('''
             INSERT INTO Budget (
-                UserID, CategoryID, AccountID, Budget_limit, 
+                UserID, BudgetID, CategoryID, WalletID, Budget_limit, 
                 Repeat_type, Start_date, End_date
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (user_id, category_id, account_id, budget_limit, 
-              repeat_type, start_date, end_date))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, next_budget_id, category_id, wallet_id, budget_limit, 
+               start_date, end_date))
 
         budget_id = cursor.lastrowid
         conn.commit()
@@ -120,9 +71,9 @@ def create_budget():
 @budget_bp.route('/api/budgets', methods=['GET'])
 def get_budgets():
     """Lấy danh sách ngân sách của người dùng"""
-    user_id = request.args.get('user_id')
-    category_id = request.args.get('category_id')
-    account_id = request.args.get('account_id')
+    user_id = request.args.get('UserID')
+    category_id = request.args.get('CategoryID')
+    wallet_id = request.args.get('WalletID')
     active_only = request.args.get('active_only', 'true').lower() == 'true'
 
     if not user_id:
@@ -143,10 +94,10 @@ def get_budgets():
                 COALESCE(SUM(t.Amount), 0) as spent_amount
             FROM Budget b
             JOIN Category c ON b.CategoryID = c.CategoryID
-            JOIN Account a ON b.AccountID = a.AccountID
+            JOIN Account a ON b.WalletID = a.WalletID
             LEFT JOIN Transactions t ON 
                 b.CategoryID = t.CategoryID AND
-                b.AccountID = t.AccountID AND
+                b.WalletID = t.WalletID AND
                 t.Transaction_date >= b.Start_date AND
                 (t.Transaction_date <= b.End_date OR b.End_date IS NULL)
             WHERE b.UserID = ?
@@ -157,9 +108,9 @@ def get_budgets():
             query += ' AND b.CategoryID = ?'
             params.append(category_id)
 
-        if account_id:
-            query += ' AND b.AccountID = ?'
-            params.append(account_id)
+        if wallet_id:
+            query += ' AND b.WalletID = ?'
+            params.append(wallet_id)
 
         if active_only:
             query += ''' 
@@ -210,15 +161,15 @@ def get_budget_detail(budget_id):
             SELECT 
                 b.*,
                 c.Category_name,
-                a.Account_name,
+                w.Name,
                 COALESCE(SUM(t.Amount), 0) as spent_amount,
                 COUNT(DISTINCT t.TransactionID) as transaction_count
             FROM Budget b
             JOIN Category c ON b.CategoryID = c.CategoryID
-            JOIN Account a ON b.AccountID = a.AccountID
+            JOIN Wallet w ON b.WalletID = w.WalletID
             LEFT JOIN Transactions t ON 
                 b.CategoryID = t.CategoryID AND
-                b.AccountID = t.AccountID AND
+                b.WalletID = t.WalletID AND
                 t.Transaction_date >= b.Start_date AND
                 (t.Transaction_date <= b.End_date OR b.End_date IS NULL)
             WHERE b.BudgetID = ?
@@ -250,12 +201,12 @@ def get_budget_detail(budget_id):
             FROM Transactions t
             WHERE 
                 t.CategoryID = ? AND
-                t.AccountID = ? AND
+                t.WalletID = ? AND
                 t.Transaction_date >= ? AND
                 (t.Transaction_date <= ? OR ? IS NULL)
             ORDER BY t.Transaction_date DESC
             LIMIT 5
-        ''', (budget['CategoryID'], budget['AccountID'], 
+        ''', (budget['CategoryID'], budget['WalletID'], 
               budget['Start_date'], budget['End_date'], 
               budget['End_date']))
 
@@ -285,7 +236,7 @@ def update_budget(budget_id):
 
         # Check if budget exists
         cursor.execute('''
-            SELECT UserID, CategoryID, AccountID 
+            SELECT UserID, CategoryID, WalletID 
             FROM Budget 
             WHERE BudgetID = ?
         ''', (budget_id,))
@@ -403,7 +354,7 @@ def delete_budget(budget_id):
 def get_budget_overview():
     """Lấy tổng quan về tình hình ngân sách"""
     user_id = request.args.get('user_id')
-    account_id = request.args.get('account_id')
+    wallet_id = request.args.get('wallet_id')
 
     if not user_id:
         return jsonify({
@@ -431,7 +382,7 @@ def get_budget_overview():
                 FROM Budget b2
                 LEFT JOIN Transactions t ON 
                     b2.CategoryID = t.CategoryID AND
-                    b2.AccountID = t.AccountID AND
+                    b2.WalletID = t.WalletID AND
                     t.Transaction_date >= b2.Start_date AND
                     (t.Transaction_date <= b2.End_date OR b2.End_date IS NULL)
                 WHERE b2.UserID = ?
@@ -442,9 +393,9 @@ def get_budget_overview():
         '''
         params = [user_id, user_id]
 
-        if account_id:
-            query = query.replace('WHERE b.UserID = ?', 'WHERE b.UserID = ? AND b.AccountID = ?')
-            params = [user_id, user_id, account_id]
+        if wallet_id:
+            query = query.replace('WHERE b.UserID = ?', 'WHERE b.UserID = ? AND b.WalletID = ?')
+            params = [user_id, user_id, wallet_id]
 
         cursor.execute(query, params)
         overview = dict(cursor.fetchone())
@@ -458,10 +409,10 @@ def get_budget_overview():
                 COALESCE(SUM(t.Amount), 0) as spent_amount
             FROM Budget b
             JOIN Category c ON b.CategoryID = c.CategoryID
-            JOIN Account a ON b.AccountID = a.AccountID
+            JOIN Account a ON b.WalletID = a.WalletID
             LEFT JOIN Transactions t ON 
                 b.CategoryID = t.CategoryID AND
-                b.AccountID = t.AccountID AND
+                b.WalletID = t.WalletID AND
                 t.Transaction_date >= b.Start_date AND
                 (t.Transaction_date <= b.End_date OR b.End_date IS NULL)
             WHERE b.UserID = ? AND 

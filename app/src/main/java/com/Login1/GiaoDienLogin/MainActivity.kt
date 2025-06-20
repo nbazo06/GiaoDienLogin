@@ -1,7 +1,9 @@
 package com.Login1.GiaoDienLogin
 
+//import com.Login1.GiaoDienLogin.navigation.SetupNavGraph
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -15,7 +17,6 @@ import com.Login1.GiaoDienChinh.BudgetScreen
 import com.Login1.GiaoDienChinh.HomeScreen
 import com.Login1.navigation.SetupNavGraph
 import com.Login1.GiaoDienChinh.TransactionHistoryScreen
-//import com.Login1.GiaoDienLogin.navigation.SetupNavGraph
 import com.Login1.GiaoDienLogin.ui.theme.GiaoDienLoginTheme
 import com.Login1.sendLocalNotification
 import com.Login1.service.insertDrawableIconsIntoDatabase
@@ -24,18 +25,20 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         insertDrawableIconsIntoDatabase(this)
+        Log.d("Test", "Cash: ${R.drawable.cash}")
+        Log.d("Test", "Atm: ${R.drawable.atm}")
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-//            sendLocalNotification(this, "Thông báo test", "Bạn đã chi tiêu vượt ngân sách!")
-////            GiaoDienLoginTheme {
-//                val navController = rememberNavController()
-//                Scaffold(modifier = Modifier.fillMaxSize()) {
-//                    SetupNavGraph(navController = navController)
-//                }
-//            }/*
-//            val navController = rememberNavController()
-//            TransactionHistoryScreen(navController = navController, account_id = "123")
+            //sendLocalNotification(this, "Thông báo test", "Bạn đã chi tiêu vượt ngân sách!")
+            GiaoDienLoginTheme {
+                val navController = rememberNavController()
+                Scaffold(modifier = Modifier.fillMaxSize()) {
+                    SetupNavGraph(navController = navController)
+                }
+            }/*
+            val navController = rememberNavController()
+           TransactionHistoryScreen(navController = navController, account_id = "123")*/
         }
     }
     /*override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,7 +49,7 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             HomeScreen(navController = navController, account_id = "1")
             //AddTransactionScreen(navController = navController, account_id =  "1")
-            //TransactionHistoryScreen(navController = navController, userId = "1")
+            TransactionHistoryScreen(navController = navController, userId = "1")
 
         }
     }*/

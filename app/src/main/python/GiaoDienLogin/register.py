@@ -85,7 +85,18 @@ def register():
                 VALUES (?, ?, ?, ?, ?)
             ''', (user_id, i, category_name, expense, category_icon))
             i += 1
+            
+        # Insert default wallets
+        default_wallets = [
+            (user_id, '1', 'Ví tiền mặt', 0, 'cash', '2130968585'),
+            (user_id, '2', 'Ví ngân hàng', 0, 'bank', '2130968578')
+        ]
         
+        for user_id, wallet_id, wallet_name, balance, account_type, account_icon in default_wallets:
+            cursor.execute('''
+                INSERT INTO Wallet (UserID, WalletID, Name, Balance, Type, Icon)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (user_id, wallet_id, wallet_name, balance, account_type, account_icon))
         
         conn.commit()
         return jsonify({
