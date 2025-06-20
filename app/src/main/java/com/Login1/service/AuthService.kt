@@ -20,6 +20,12 @@ data class Category(
     val icon: Int
 )
 
+data class Wallet(
+    val id: String,
+    val name: String,
+    val iconResid: Int
+)
+
 data class GiaoDich(
     val soTien: Int,
     val tenLoai: String,
@@ -27,6 +33,15 @@ data class GiaoDich(
     val ngay: String,
     val nguonTien: String,
     val iconRes: Int
+)
+
+data class TransactionUpdateRequest(
+    val transaction_type: String,
+    val amount: Double,
+    val CategoryID: Int,
+    val transaction_date: String,
+    val money_source: String,
+    val note: String
 )
 
 private const val DATABASE_NAME = "login_database.db"
@@ -316,7 +331,7 @@ class AuthService {
         }
 
         suspend fun addTransaction(
-            account_id: String,
+            user_id: String,
             transaction_type: String,
             amount: String,
             CategoryID: String,
@@ -338,13 +353,13 @@ class AuthService {
                 }
 
                 val jsonInputString = JSONObject().apply {
-                    put("account_id", account_id)
-                    put("transaction_type", transaction_type)
-                    put("amount", amount)
+                    put("UserID", user_id)
+                    put("Transaction_type", transaction_type)
+                    put("Amount", amount)
                     put("CategoryID", CategoryID)
-                    put("transaction_date", transaction_date)
-                    put("money_source", money_source)
-                    put("note", note)
+                    put("Transaction_date", transaction_date)
+                    put("WalletID", money_source)
+                    put("Note", note)
                 }.toString()
 
                 OutputStreamWriter(connection.outputStream).use { it.write(jsonInputString) }
@@ -359,6 +374,24 @@ class AuthService {
                 Result.failure(Exception("Không thể kết nối đến server"))
             } finally {
                 connection?.disconnect()
+            }
+        }
+
+        suspend fun getEmail(userId: String): Result<String> {
+            Log.d("AuthService", "Calling /accounts API with userId: $userId")
+            return try {
+                val response = get("$BASE_URL/accounts?user_id=$userId")
+                Log.d("AuthService", "Response: $response")
+
+                return if (response.getBoolean("success")) {
+                    val email = response.getString("email")
+                    Result.success(email)
+                } else {
+                    Result.failure(Exception(response.getString("message")))
+                }
+            } catch (e: Exception) {
+                Log.e("AuthService", "Lỗi khi lấy email: ${e.message}", e)
+                Result.failure(Exception("Không thể lấy email: ${e.message}"))
             }
         }
 
@@ -385,6 +418,28 @@ class AuthService {
             } catch (e: Exception) {
                 Log.e("AuthService", "Error: ${e.message}", e)
                 Result.failure(Exception("Không thể lấy dữ liệu categories: ${e.message}"))
+            }
+        }
+
+        suspend fun getWallets(userId: String): Result<List<Wallet>> {
+            return try {
+                val response = get("$BASE_URL/wallets?user_id=$userId")
+                if (response.getBoolean("success")) {
+                    val walletsJson = response.getJSONArray("wallets")
+                    val wallets = (0 until walletsJson.length()).map { i ->
+                        val walletJson = walletsJson.getJSONObject(i)
+                        Wallet(
+                            id = walletJson.getString("WalletID"),
+                            name = walletJson.getString("Name"),
+                            iconResid = walletJson.getInt("Icon")
+                        )
+                    }
+                    Result.success(wallets)
+                } else {
+                    Result.failure(Exception(response.getString("message")))
+                }
+            } catch (e: Exception) {
+                Result.failure(Exception("Không thể lấy danh sách ví: ${e.message}"))
             }
         }
 
@@ -419,8 +474,52 @@ class AuthService {
                 iconRes = getInt("Category_icon"),
                 ngay = parsedDate.format(formatter),
                 thuNhap = getString("Transaction_type") == "income",
-                nguonTien = getString("Money_source")
+                nguonTien = getString("WalletID")
             )
+        }
+        suspend fun updateTransaction(
+            transactionId: String,
+            amount: String,
+            transaction_type: String,
+            CategoryID: String,
+            transaction_date: String,
+            money_source: String,
+            note: String,
+        ): Result<JSONObject> {
+            var connection: HttpURLConnection? = null
+            return try {
+                val url = URL("$BASE_URL/transactions/$transactionId")
+                connection = url.openConnection() as HttpURLConnection
+                connection.apply {
+                    requestMethod = "PUT"
+                    setRequestProperty("Content-Type", "application/json")
+                    doOutput = true
+                    connectTimeout = 5000
+                    readTimeout = 5000
+                }
+
+                val jsonInputString = JSONObject().apply {
+                    put("Amount", amount)
+                    put("Transaction_type", transaction_type)
+                    put("CategoryID", CategoryID)
+                    put("Transaction_date", transaction_date)
+                    put("WalletID", money_source)
+                    put("Note", note)
+                }.toString()
+
+                OutputStreamWriter(connection.outputStream).use { it.write(jsonInputString) }
+
+                val response = readResponse(connection)
+                if (connection.responseCode in 200..299) {
+                    Result.success(response)
+                } else {
+                    Result.failure(Exception(response.getString("message")))
+                }
+            } catch (e: Exception) {
+                Result.failure(Exception("Không thể kết nối đến server"))
+            } finally {
+                connection?.disconnect()
+            }
         }
     }
 }

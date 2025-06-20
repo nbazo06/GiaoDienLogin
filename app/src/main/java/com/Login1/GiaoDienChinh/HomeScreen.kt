@@ -24,6 +24,7 @@ import androidx.navigation.compose.rememberNavController
 import com.Login1.GiaoDienLogin.R
 import com.Login1.service.AuthService
 import com.Login1.service.GiaoDich
+import com.Login1.service.Wallet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -43,14 +44,27 @@ fun HomeScreenPreview() {
 @Composable
 fun HomeScreen(navController: NavHostController, account_id: String) {
     var transactions by remember { mutableStateOf<Map<String, List<GiaoDich>>>(emptyMap()) }
+    var wallets by remember { mutableStateOf<List<Wallet>>(emptyList()) }
 
     // Load transactions
     LaunchedEffect(account_id) {
         CoroutineScope(Dispatchers.IO).launch {
-            AuthService.getTransactions(account_id).fold(
-                onSuccess = { fetchedCategories ->
+            AuthService.getWallets(account_id).fold(
+                onSuccess = { fetchedWallets ->
                     withContext(Dispatchers.Main) {
-                        transactions = fetchedCategories
+                        wallets = fetchedWallets
+                    }
+                },
+                onFailure = { exception ->
+                    withContext(Dispatchers.Main) {
+                        Log.e("HomeScreen", "Lỗi lấy ví: ${exception.message}")
+                    }
+                }
+            )
+            AuthService.getTransactions(account_id).fold(
+                onSuccess = { fetchedTransactions ->
+                    withContext(Dispatchers.Main) {
+                        transactions = fetchedTransactions
                     }
                 },
                 onFailure = { exception ->
@@ -75,7 +89,7 @@ fun HomeScreen(navController: NavHostController, account_id: String) {
                 .verticalScroll(rememberScrollState())
         ) {
             HeaderSection(transactions)
-            BalanceCard(transactions)
+            BalanceCard(transactions, wallets)
             TopSpendingSection(transactions)
             RecentTransactionsSection(navController, account_id, transactions)
         }
@@ -224,7 +238,7 @@ fun BottomNavigationBar(navController: NavHostController, account_id: String) {
 
 
 @Composable
-fun BalanceCard(transactions: Map<String, List<GiaoDich>>) {
+fun BalanceCard(transactions: Map<String, List<GiaoDich>>, wallets: List<Wallet>) {
     Card(
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(12.dp),
@@ -234,7 +248,7 @@ fun BalanceCard(transactions: Map<String, List<GiaoDich>>) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically  // thêm dòng này
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Ví của tôi", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 TextButton(onClick = { /* Xử lý click xem tất cả */ }) {
@@ -243,14 +257,13 @@ fun BalanceCard(transactions: Map<String, List<GiaoDich>>) {
             }
             Spacer(modifier = Modifier.height(14.dp))
             HorizontalDivider(thickness = 1.dp, color = Color.Gray)
-
             Spacer(modifier = Modifier.height(14.dp))
-            val tongTienMat = tinhTongTheoNguonTien(transactions, "Tiền mặt")
-            WalletItem(R.drawable.cash,"Tiền mặt", "${DecimalFormat("#,###").format(tongTienMat).replace(",", ".")} đ")
 
-            Spacer(modifier = Modifier.height(15.dp))
-            val tongBank = tinhTongTheoNguonTien(transactions, "Ngân hàng")
-            WalletItem(R.drawable.atm,"Ngân hàng", "${DecimalFormat("#,###").format(tongBank).replace(",", ".")} đ")
+            wallets.forEach { wallet ->
+                val tongSoDu = tinhTongTheoWalletID(transactions, wallet.id)
+                WalletItem(wallet.iconResid, wallet.name, "${DecimalFormat("#,###").format(tongSoDu).replace(",", ".")} đ")
+                Spacer(modifier = Modifier.height(15.dp))
+            }
         }
     }
 }
@@ -427,4 +440,11 @@ fun get3GiaoDichGanNhat(transactionsByDate: Map<String, List<GiaoDich>>): List<G
         .flatten()
         .sortedByDescending { LocalDate.parse(it.ngay, DateTimeFormatter.ofPattern("dd-MM-yyyy")) }
         .take(3)
+}
+
+fun tinhTongTheoWalletID(transactions: Map<String, List<GiaoDich>>, walletId: String): Int {
+    return transactions.values
+        .flatten()
+        .filter { it.nguonTien == walletId }
+        .sumOf { if (it.thuNhap) it.soTien else -it.soTien }
 }

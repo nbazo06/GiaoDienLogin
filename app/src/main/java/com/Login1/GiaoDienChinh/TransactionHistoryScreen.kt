@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.Login1.GiaoDienLogin.R
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.Login1.GiaoDienLogin.R
@@ -26,6 +27,8 @@ import com.Login1.service.GiaoDich
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.Login1.service.GiaoDich
+import com.Login1.service.Wallet
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -44,20 +47,22 @@ import kotlin.math.abs
 
 
 @Composable
-fun TransactionHistoryScreen(navController: NavHostController, account_id: String) {
+fun TransactionHistoryScreen(navController: NavHostController, user_id: String) {
     var nguonTien by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("Tháng này") }
     var transactions by remember { mutableStateOf<Map<String, List<GiaoDich>>>(emptyMap()) }
-    var expandedNguonTien by remember { mutableStateOf(false) }
+    var wallets by remember { mutableStateOf<List<Wallet>>(emptyList()) }
 
     val nguonTienList = listOf(
+        NguonTienItem(R.drawable.cash, "Tất cả"),
         NguonTienItem(R.drawable.cash, "Tiền mặt"),
         NguonTienItem(R.drawable.atm, "Ngân hàng")
     )
 
-    LaunchedEffect(account_id) {
+    // Load transactions and wallets
+    LaunchedEffect(user_id) {
         CoroutineScope(Dispatchers.IO).launch {
-            AuthService.getTransactions(account_id).fold(
+            AuthService.getTransactions(user_id).fold(
                 onSuccess = { fetchedCategories ->
                     withContext(Dispatchers.Main) {
                         transactions = fetchedCategories
@@ -66,6 +71,18 @@ fun TransactionHistoryScreen(navController: NavHostController, account_id: Strin
                 onFailure = { exception ->
                     withContext(Dispatchers.Main) {
                         Log.e("AddTransactionScreen", "Lỗi: ${exception.message}")
+                    }
+                }
+            )
+            AuthService.getWallets(user_id).fold(
+                onSuccess = { fetchedWallets ->
+                    withContext(Dispatchers.Main) {
+                        wallets = fetchedWallets
+                    }
+                },
+                onFailure = { exception ->
+                    withContext(Dispatchers.Main) {
+                        Log.e("TransactionHistory", "Lỗi lấy ví: ${exception.message}")
                     }
                 }
             )
@@ -85,7 +102,7 @@ fun TransactionHistoryScreen(navController: NavHostController, account_id: Strin
 
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(navController, account_id) }
+        bottomBar = { BottomNavigationBar(navController, user_id) }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -114,24 +131,110 @@ fun TransactionHistoryScreen(navController: NavHostController, account_id: Strin
 
             TopBarIcons()
             FilterButtonsRow()
-            TransactionHistoryContent(transactions)
+            TransactionHistoryContent(transactions, nguonTien, wallets)
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun TransactionHistoryScreenPreview() {
+    val navController = rememberNavController()
+    TransactionHistoryScreen(navController = navController, user_id = "123")
+}
+
+@Composable
+fun TopBarIcons() {
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopEnd
+    ) {
+        Row(
+            modifier = Modifier.padding(top = 12.dp)
+        ) {
+            IconButton(onClick = { /*TODO*/ }) {
+                Image(
+                    painter = painterResource(id = R.drawable.search),
+                    contentDescription = "Search",
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+
+            IconButton(onClick = { /*TODO*/ }) {
+                Image(
+                    painter = painterResource(id = R.drawable.ellipsis),
+                    contentDescription = "More",
+                    modifier = Modifier.size(30.dp)
+                )
+            }
         }
     }
 }
 
 @Composable
-fun TransactionHistoryContent(transactionsByDate: Map<String, List<GiaoDich>>) {
+fun FilterButtonsRow() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 75.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+        }
+    }
+}
+
+@Composable
+fun BottomIconWithText(iconRes: Int, label: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 8.dp)
+    ) {
+        Image(
+            painter = painterResource(id = iconRes),
+            contentDescription = label,
+            modifier = Modifier.size(30.dp)
+        )
+        Text(text = label, fontSize = 12.sp)
+    }
+}
+
+fun filterTransactionsByNguonTien(
+    transactionsByDate: Map<String, List<GiaoDich>>,
+    nguonTien: String
+): Map<String, List<GiaoDich>> {
+    if (nguonTien == "Tất cả" || nguonTien == "") return transactionsByDate
+
+    return transactionsByDate.mapValues { (_, transactions) ->
+        transactions.filter { it.nguonTien == nguonTien }
+    }.filterValues { it.isNotEmpty() }
+}
+
+@Composable
+fun TransactionHistoryContent(
+    transactionsByDate: Map<String, List<GiaoDich>>,
+    nguonTien: String,
+    wallets: List<Wallet>
+) {
+    val filteredTransactions = filterTransactionsByNguonTien(transactionsByDate, nguonTien)
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(top = 150.dp)
     ) {
-        LichSuGiaoDichScreen(transactionsByDate)
+        LichSuGiaoDichScreen(filteredTransactions, wallets)
     }
 }
 
 @Composable
-fun LichSuGiaoDichScreen(transactionsByDate: Map<String, List<GiaoDich>>) {
+fun LichSuGiaoDichScreen(
+    transactionsByDate: Map<String, List<GiaoDich>>,
+    wallets: List<Wallet>
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -191,6 +294,12 @@ fun LichSuGiaoDichScreen(transactionsByDate: Map<String, List<GiaoDich>>) {
                 Spacer(modifier = Modifier.height(12.dp))
 
                 transactions.forEach { giaoDich ->
+                    val walletName = wallets.find { it.id == giaoDich.nguonTien }?.name ?: "Không rõ"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     SwipeableTransactionItem(
                         giaoDich = giaoDich,
                         onSwipeDelete = {
