@@ -20,13 +20,29 @@ data class Category(
     val icon: Int
 )
 
+data class Wallet(
+    val id: String,
+    val name: String,
+    val iconResid: Int
+)
+
 data class GiaoDich(
+    val id: String,
     val soTien: Int,
     val tenLoai: String,
     val thuNhap: Boolean,
     val ngay: String,
     val nguonTien: String,
     val iconRes: Int
+)
+
+data class TransactionUpdateRequest(
+    val transaction_type: String,
+    val amount: Double,
+    val CategoryID: Int,
+    val transaction_date: String,
+    val money_source: String,
+    val note: String
 )
 
 private const val DATABASE_NAME = "login_database.db"
@@ -316,7 +332,7 @@ class AuthService {
         }
 
         suspend fun addTransaction(
-            account_id: String,
+            user_id: String,
             transaction_type: String,
             amount: String,
             CategoryID: String,
@@ -338,13 +354,13 @@ class AuthService {
                 }
 
                 val jsonInputString = JSONObject().apply {
-                    put("account_id", account_id)
-                    put("transaction_type", transaction_type)
-                    put("amount", amount)
+                    put("UserID", user_id)
+                    put("Transaction_type", transaction_type)
+                    put("Amount", amount)
                     put("CategoryID", CategoryID)
-                    put("transaction_date", transaction_date)
-                    put("money_source", money_source)
-                    put("note", note)
+                    put("Transaction_date", transaction_date)
+                    put("WalletID", money_source)
+                    put("Note", note)
                 }.toString()
 
                 OutputStreamWriter(connection.outputStream).use { it.write(jsonInputString) }
@@ -361,6 +377,37 @@ class AuthService {
                 connection?.disconnect()
             }
         }
+
+
+        suspend fun getNotifications(accountId: String): Result<List<NotificationItem>> {
+            return try {
+                val response = get("$BASE_URL/notifications/$accountId")
+                if (response.getString("status") == "success") {
+                    val notificationsJsonArray = response.getJSONArray("notifications")
+                    val notifications = (0 until notificationsJsonArray.length()).map { i ->
+                        val item = notificationsJsonArray.getJSONObject(i)
+                        NotificationItem(
+                            notificationID = item.getInt("notification_id"),
+                            accountID = accountId.toInt(),
+                            userID = 0, // nếu backend không trả thì có thể mặc định là 0 hoặc bỏ luôn
+                            title = item.getString("title"),
+                            message = item.getString("message"),
+                            type = item.getString("type"),
+                            isRead = item.getBoolean("is_read"),
+                            sentAt = item.getString("sent_at")
+                        )
+                    }
+                    Result.success(notifications)
+                } else {
+                    Result.failure(Exception("Không lấy được danh sách thông báo"))
+                }
+            } catch (e: Exception) {
+                Log.e("AuthService", "Lỗi lấy notifications: ${e.message}", e)
+                Result.failure(e)
+            }
+        }
+
+
 
         suspend fun getEmail(userId: String): Result<String> {
             Log.d("AuthService", "Calling /accounts API with userId: $userId")
@@ -379,6 +426,7 @@ class AuthService {
                 Result.failure(Exception("Không thể lấy email: ${e.message}"))
             }
         }
+
 
         suspend fun getCategories(userId: String): Result<List<Category>> {
             Log.d("AuthService", "Calling /categories API with userId: $userId")
@@ -403,6 +451,28 @@ class AuthService {
             } catch (e: Exception) {
                 Log.e("AuthService", "Error: ${e.message}", e)
                 Result.failure(Exception("Không thể lấy dữ liệu categories: ${e.message}"))
+            }
+        }
+
+        suspend fun getWallets(userId: String): Result<List<Wallet>> {
+            return try {
+                val response = get("$BASE_URL/wallets?user_id=$userId")
+                if (response.getBoolean("success")) {
+                    val walletsJson = response.getJSONArray("wallets")
+                    val wallets = (0 until walletsJson.length()).map { i ->
+                        val walletJson = walletsJson.getJSONObject(i)
+                        Wallet(
+                            id = walletJson.getString("WalletID"),
+                            name = walletJson.getString("Name"),
+                            iconResid = walletJson.getInt("Icon")
+                        )
+                    }
+                    Result.success(wallets)
+                } else {
+                    Result.failure(Exception(response.getString("message")))
+                }
+            } catch (e: Exception) {
+                Result.failure(Exception("Không thể lấy danh sách ví: ${e.message}"))
             }
         }
 
@@ -432,13 +502,82 @@ class AuthService {
             val parsedDate = LocalDate.parse(rawDate, formatter) // Chuyển đổi sang LocalDate
 
             return GiaoDich(
+                id = getString("TransactionID"),
                 soTien = getInt("Amount"),
                 tenLoai = getString("Category_name"),
                 iconRes = getInt("Category_icon"),
                 ngay = parsedDate.format(formatter),
                 thuNhap = getString("Transaction_type") == "income",
-                nguonTien = getString("Money_source")
+                nguonTien = getString("WalletID")
             )
+        }
+
+        // suspend fun updateTransaction(
+        //     transactionId: String,
+        //     amount: String,
+        //     transaction_type: String,
+        //     CategoryID: String,
+        //     transaction_date: String,
+        //     money_source: String,
+        //     note: String,
+        // ): Result<JSONObject> {
+        //     var connection: HttpURLConnection? = null
+        //     return try {
+        //         val url = URL("$BASE_URL/transactions/$transactionId")
+        //         connection = url.openConnection() as HttpURLConnection
+        //         connection.apply {
+        //             requestMethod = "PUT"
+        //             setRequestProperty("Content-Type", "application/json")
+        //             doOutput = true
+        //             connectTimeout = 5000
+        //             readTimeout = 5000
+        //         }
+
+        //         val jsonInputString = JSONObject().apply {
+        //             put("Amount", amount)
+        //             put("Transaction_type", transaction_type)
+        //             put("CategoryID", CategoryID)
+        //             put("Transaction_date", transaction_date)
+        //             put("WalletID", money_source)
+        //             put("Note", note)
+        //         }.toString()
+
+        //         OutputStreamWriter(connection.outputStream).use { it.write(jsonInputString) }
+
+        //         val response = readResponse(connection)
+        //         if (connection.responseCode in 200..299) {
+        //             Result.success(response)
+        //         } else {
+        //             Result.failure(Exception(response.getString("message")))
+        //         }
+        //     } catch (e: Exception) {
+        //         Result.failure(Exception("Không thể kết nối đến server"))
+        //     } finally {
+        //         connection?.disconnect()
+        //     }
+        // }
+        
+        suspend fun deleteTransaction(transactionId: String): Result<JSONObject> {
+            var connection: HttpURLConnection? = null
+            return try {
+                val url = URL("$BASE_URL/transactions/$transactionId")
+                connection = url.openConnection() as HttpURLConnection
+                connection.apply {
+                    requestMethod = "DELETE"
+                    connectTimeout = 5000
+                    readTimeout = 5000
+                }
+                val response = readResponse(connection)
+                if (connection.responseCode in 200..299) {
+                    Result.success(response)
+                } else {
+                    Result.failure(Exception(response.optString("message", "Xóa giao dịch thất bại")))
+                }
+            } catch (e: Exception) {
+                Result.failure(Exception("Không thể kết nối đến server: ${e.message}"))
+            } finally {
+                connection?.disconnect()
+            }
         }
     }
 }
