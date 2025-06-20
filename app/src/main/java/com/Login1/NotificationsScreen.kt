@@ -19,6 +19,17 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.Login1.GiaoDienChinh.BottomNavigationBar
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import com.Login1.GiaoDienLogin.R
+
 
 // ==== MODEL PHÙ HỢP DATABASE ====
 data class NotificationItem(
@@ -176,4 +187,43 @@ fun NotificationScreenPreview() {
         account_id = "123",
         notifications = sampleNotifications
     )
+}
+
+fun sendLocalNotification(context: Context, title: String, message: String) {
+    val channelId = "budget_channel"
+    val notificationId = 1001
+
+    // Tạo channel nếu cần
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+            channelId,
+            "Thông báo ngân sách",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Thông báo về giới hạn ngân sách"
+        }
+
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
+    }
+
+    // Tạo thông báo
+    val builder = NotificationCompat.Builder(context, channelId)
+        .setSmallIcon(R.drawable.bell) // icon phải tồn tại trong drawable
+        .setContentTitle(title)
+        .setContentText(message)
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setAutoCancel(true)
+
+    //  Kiểm tra quyền trước khi gọi notify (API 33+ yêu cầu)
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    ) {
+        NotificationManagerCompat.from(context).notify(notificationId, builder.build())
+    } else {
+        Log.e("NotifyError", "Thiếu quyền POST_NOTIFICATIONS, không gửi được thông báo.")
+    }
 }

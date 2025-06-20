@@ -17,6 +17,7 @@ import com.Login1.navigation.SetupNavGraph
 import com.Login1.GiaoDienChinh.TransactionHistoryScreen
 //import com.Login1.GiaoDienLogin.navigation.SetupNavGraph
 import com.Login1.GiaoDienLogin.ui.theme.GiaoDienLoginTheme
+import com.Login1.sendLocalNotification
 import com.Login1.service.insertDrawableIconsIntoDatabase
 
 class MainActivity : ComponentActivity() {
@@ -26,14 +27,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-//            GiaoDienLoginTheme {
+//            sendLocalNotification(this, "Thông báo test", "Bạn đã chi tiêu vượt ngân sách!")
+////            GiaoDienLoginTheme {
 //                val navController = rememberNavController()
 //                Scaffold(modifier = Modifier.fillMaxSize()) {
 //                    SetupNavGraph(navController = navController)
 //                }
 //            }/*
-            val navController = rememberNavController()
-            TransactionHistoryScreen(navController = navController, account_id = "123")
+//            val navController = rememberNavController()
+//            TransactionHistoryScreen(navController = navController, account_id = "123")
         }
     }
     /*override fun onCreate(savedInstanceState: Bundle?) {
