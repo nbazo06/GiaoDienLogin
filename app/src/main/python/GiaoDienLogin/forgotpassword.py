@@ -17,8 +17,8 @@ def send_otp_email(email, otp):
     """Gửi mã OTP qua email"""
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
-    sender_email = "vaimuc590@gmail.com"
-    sender_password = "REMOVED"
+    sender_email = "admin@gmail.com"
+    sender_password = "" // app key
 
     # Tạo message
     message = MIMEMultipart()
