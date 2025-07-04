@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 ```bash
 # Di chuyển vào thư mục chứa code Python
-cd app/src/main/python
+cd App_BackEnd/main
 
 # Chạy Flask server
 python main.py
