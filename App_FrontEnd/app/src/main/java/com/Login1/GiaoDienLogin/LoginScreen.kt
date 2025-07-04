@@ -49,7 +49,6 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun LoginScreen(navController: NavHostController) {
-    val context = LocalContext.current
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
     var email by remember { mutableStateOf("") }
@@ -204,9 +203,6 @@ fun LoginScreen(navController: NavHostController) {
                             CoroutineScope(Dispatchers.Main).launch {
                                 if (response.getBoolean("success")) {
                                     successMessage = "Đăng nhập thành công"
-                                    CoroutineScope(Dispatchers.IO).launch {
-                                    AuthService.insertIcon(context)
-                                }
                                     delay(1000)
                                     navController.navigate("home_screen/${response.getString("user_id")}") {
                                         popUpTo("login_screen") { inclusive = true }

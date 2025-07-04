@@ -65,12 +65,23 @@ def register():
         
         # Insert default categories
         default_categories = [
-            ('Ăn uống', 'expense', 18),
-            ('Giải trí', 'expense', 16),
+            ('Ăn uống', 'expense', 21),
+            ('Giải trí', 'expense', 19),
             ('Hóa đơn', 'expense', 8),
-            ('Chợ, siêu thị', 'expense', 17),
-            ('Di chuyển', 'expense', 15),
+            ('Chợ, siêu thị', 'expense', 20),
+            ('Di chuyển', 'expense', 18),
+            ('Tiền chuyển đi', 'expense', 2530),
+            ('Thuê nhà', 'expense', 22),
+            ('Sửa chữa, bảo trì', 'expense', 24),
+            ('Y tế', 'expense', 17),
             
+            ('Học Bổng', 'income', 25),
+            ('Lương', 'income', 29),
+            ('Tiền chuyển đến', 'income', 29),
+            ('Thưởng', 'income', 12),
+            ('Tiền lãi', 'income', 16),
+            
+            ('Khác', 'income', 10),
             ('Khác', 'expense', 10)
         ]
         for category_name, category_type, category_icon in default_categories:
